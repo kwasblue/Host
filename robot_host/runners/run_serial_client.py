@@ -1,6 +1,6 @@
 import time
-from client import RobotClient
-from transport import SerialTransport
+from robot_host.core.client import RobotClient
+from robot_host.transports.transport import SerialTransport
 
 
 def main():

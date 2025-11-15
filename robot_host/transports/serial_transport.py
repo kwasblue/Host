@@ -3,7 +3,7 @@ from typing import Optional
 
 import serial
 
-from robot_host.stream_transport import StreamTransport
+from robot_host.transports.stream_transport import StreamTransport
 
 
 class SerialTransport(StreamTransport):

@@ -1,7 +1,7 @@
 
 
-from client import RobotClient
-from tcp_transport import TcpTransport
+from robot_host.core.client import RobotClient
+from robot_host.transports.tcp_transport import TcpTransport
 
 def main():
     # AP mode example: often 192.168.4.1

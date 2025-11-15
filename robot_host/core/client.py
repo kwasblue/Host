@@ -3,10 +3,10 @@ from typing import Any
 import struct
 import json
 
-from event_bus import EventBus
-import protocol
-from messages import MsgType
-from base_transport import BaseTransport
+from robot_host.core.event_bus import EventBus
+from robot_host.core import protocol
+from robot_host.core.messages import MsgType
+from robot_host.transports.base_transport import BaseTransport
 
 
 class RobotClient:

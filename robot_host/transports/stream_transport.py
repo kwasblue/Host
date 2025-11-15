@@ -4,8 +4,8 @@ import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
-import protocol
-from base_transport import BaseTransport
+from robot_host.core import protocol
+from robot_host.transports.base_transport import BaseTransport
 
 
 class StreamTransport(BaseTransport, ABC):

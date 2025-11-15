@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 from typing import Optional
 
-from stream_transport import StreamTransport
+from robot_host.transports.stream_transport import StreamTransport
 
 
 class TcpTransport(StreamTransport):

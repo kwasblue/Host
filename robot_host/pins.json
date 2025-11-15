@@ -1,3 +1,5 @@
 {
-  "LED_STATUS": 2
+  "LED_STATUS": 2,
+  "UART1_TX": 17,
+  "UART1_RX": 16
 }

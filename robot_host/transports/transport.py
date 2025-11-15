@@ -2,7 +2,7 @@ import threading
 import time
 from typing import Callable, Optional
 import serial
-import protocol
+from robot_host.core import protocol
 
 
 class SerialTransport:

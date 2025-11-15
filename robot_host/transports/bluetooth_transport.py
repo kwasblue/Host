@@ -1,5 +1,5 @@
 from __future__ import annotations
-from robot_host.serial_transport import SerialTransport
+from robot_host.transports.serial_transport import SerialTransport
 
 
 class BluetoothSerialTransport(SerialTransport):
