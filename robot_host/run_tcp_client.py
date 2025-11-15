@@ -28,6 +28,7 @@ def main():
                 client.send_ping()
                 client.send_led_on()
                 client.send_whoami()
+                time.sleep(2)
                 client.send_led_off()
                 last_ping = now
             time.sleep(0.1)
