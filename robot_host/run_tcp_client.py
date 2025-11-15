@@ -18,6 +18,7 @@ def main():
     
 
     client.start()
+    
     try:
         import time
         last_ping = 0.0
@@ -25,7 +26,9 @@ def main():
             now = time.time()
             if now - last_ping >= 5.0:
                 client.send_ping()
+                client.send_led_on()
                 client.send_whoami()
+                client.send_led_off()
                 last_ping = now
             time.sleep(0.1)
     except KeyboardInterrupt:

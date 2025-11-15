@@ -1,10 +1,12 @@
 import time
 from typing import Any
 import struct
+import json
 
 from event_bus import EventBus
 import protocol
 from messages import MsgType
+
 
 class RobotClient:
     def __init__(self, transport: Any) -> None:
@@ -23,6 +25,35 @@ class RobotClient:
     def send_whoami(self):
         # Empty payload
         self.transport.send_frame(msg_type=MsgType.WHOAMI, payload=b"")
+    
+    def send_json_cmd(self, cmd_dict: dict):
+        """
+        Send a high-level JSON command to the robot.
+        cmd_dict should look like:
+        {
+          "kind": "cmd",
+          "type": "CMD_LED_ON",
+          "payload": {...}
+        }
+        """
+        payload = json.dumps(cmd_dict).encode("utf-8")
+        # ✅ msg_type must be an int, not bytes
+        self.transport.send_frame(protocol.MSG_CMD_JSON, payload)
+    
+    def send_led_on(self):
+        self.send_json_cmd({
+            "kind": "cmd",
+            "type": "CMD_LED_ON",
+            "payload": {}
+        })
+
+    def send_led_off(self):
+        self.send_json_cmd({
+            "kind": "cmd",
+            "type": "CMD_LED_OFF",
+            "payload": {}
+        })
+
 
     # === incoming from MCU ===
 

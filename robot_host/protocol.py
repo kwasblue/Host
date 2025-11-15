@@ -5,6 +5,7 @@ HEADER = 0xAA
 MSG_HEARTBEAT = 0x01
 MSG_PING = 0x02
 MSG_PONG = 0x03
+MSG_CMD_JSON  = 0x50
 
 
 def encode(msg_type: int, payload: bytes = b"") -> bytes:
