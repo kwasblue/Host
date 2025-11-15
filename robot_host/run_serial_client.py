@@ -1,5 +1,6 @@
 import time
 from client import RobotClient
+from transport import SerialTransport
 
 
 def main():
@@ -8,8 +9,8 @@ def main():
     # Linux:   "/dev/ttyUSB0" or "/dev/ttyACM0"
     # Windows: "COM5" etc.
     port = "/dev/cu.usbserial-0001"
-
-    client = RobotClient(port, baudrate=115200)
+    serial_port = SerialTransport(port, baudrate=115200)
+    client = RobotClient(serial_port)
 
     # subscribe to events
     client.bus.subscribe("heartbeat", lambda data: print(f"[Host] HEARTBEAT {data}"))

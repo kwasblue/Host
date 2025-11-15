@@ -1,66 +1,64 @@
 # host/robot_host/tcp_transport.py
+from __future__ import annotations
 import socket
-import threading
-import time
-from typing import Callable, Optional
+from typing import Optional
 
-from . import protocol
+from stream_transport import StreamTransport
 
 
-class TcpTransport:
+class TcpTransport(StreamTransport):
+    """
+    TCP transport built on top of StreamTransport.
+
+    ESP32 runs a TCP server, Python connects as a client:
+      - host: IP address of ESP32 (e.g. "192.168.4.1" in AP mode or LAN IP)
+      - port: TCP port (must match WifiTransport on MCU side)
+    """
+
     def __init__(self, host: str, port: int) -> None:
+        super().__init__()
         self.host = host
         self.port = port
 
         self._sock: Optional[socket.socket] = None
-        self._on_frame: Optional[Callable[[bytes], None]] = None
-        self._rx_buffer = bytearray()
-        self._stop = False
-        self._thread: Optional[threading.Thread] = None
 
-    def set_frame_handler(self, handler: Callable[[bytes], None]) -> None:
-        self._on_frame = handler
+    # === StreamTransport hooks ===
 
-    def start(self) -> None:
+    def _open(self) -> None:
+        # Create a blocking socket; StreamTransport's _reader_loop
+        # will handle timeouts by reading small chunks repeatedly.
         self._sock = socket.create_connection((self.host, self.port))
-        self._stop = False
-        self._thread = threading.Thread(target=self._reader_loop, daemon=True)
-        self._thread.start()
+        # Optional: small timeout to avoid hanging forever in recv
+        self._sock.settimeout(0.1)
 
-    def stop(self) -> None:
-        self._stop = True
-        if self._thread:
-            self._thread.join(timeout=1.0)
+    def _close(self) -> None:
         if self._sock:
             try:
                 self._sock.close()
             except OSError:
                 pass
+        self._sock = None
 
-    def _reader_loop(self) -> None:
-        assert self._sock is not None
-        sock = self._sock
-        sock.settimeout(0.1)
-        while not self._stop:
-            try:
-                data = sock.recv(256)
-                if not data:
-                    time.sleep(0.05)
-                    continue
-                self._rx_buffer.extend(data)
-                if self._on_frame:
-                    protocol.extract_frames(
-                        self._rx_buffer,
-                        lambda body: self._on_frame(body),
-                    )
-            except (socket.timeout, BlockingIOError):
-                continue
-            except OSError as e:
-                print(f"[TcpTransport] error: {e}")
-                time.sleep(0.5)
+    def _read_raw(self, n: int) -> bytes:
+        if not self._sock:
+            return b""
+        try:
+            data = self._sock.recv(n)
+            # If remote closed, recv() returns b""
+            return data
+        except socket.timeout:
+            return b""
+        except BlockingIOError:
+            return b""
+        except OSError as e:
+            print(f"[TcpTransport] recv error: {e}")
+            return b""
 
-    def send_frame(self, msg_type: int, payload: bytes = b"") -> None:
+    def _send_bytes(self, data: bytes) -> None:
         if not self._sock:
             raise RuntimeError("TCP socket not connected")
-        frame = protocol.encode(msg_type, payload)
-        self._sock.sendall(frame)
+        try:
+            self._sock.sendall(data)
+        except OSError as e:
+            print(f"[TcpTransport] send error: {e}")
+            raise
