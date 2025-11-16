@@ -1,0 +1,11 @@
+{
+  "gpio_channels": [
+    {
+      "channel": 0,
+      "mode": "output",
+      "name": "LED_STATUS",
+      "pin_name": "LED_STATUS"
+    }
+  ],
+  "schema_version": 1
+}

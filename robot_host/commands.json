@@ -12,6 +12,53 @@
       "kind": "cmd",
       "payload": {}
     },
+    "CMD_GPIO_READ": {
+      "description": "Read a digital value from a logical GPIO channel.",
+      "direction": "host->mcu",
+      "kind": "cmd",
+      "payload": {
+        "channel": {
+          "required": true,
+          "type": "int"
+        }
+      }
+    },
+    "CMD_GPIO_REGISTER_CHANNEL": {
+      "description": "Register or re-map a logical GPIO channel to a physical pin.",
+      "direction": "host->mcu",
+      "kind": "cmd",
+      "payload": {
+        "channel": {
+          "required": true,
+          "type": "int"
+        },
+        "mode": {
+          "default": "output",
+          "enum": [
+            "output",
+            "input",
+            "input_pullup"
+          ],
+          "required": false,
+          "type": "string"
+        },
+        "pin": {
+          "required": true,
+          "type": "int"
+        }
+      }
+    },
+    "CMD_GPIO_TOGGLE": {
+      "description": "Toggle a logical GPIO channel.",
+      "direction": "host->mcu",
+      "kind": "cmd",
+      "payload": {
+        "channel": {
+          "required": true,
+          "type": "int"
+        }
+      }
+    },
     "CMD_GPIO_WRITE": {
       "description": "Write a digital value to a logical GPIO channel.",
       "direction": "host->mcu",
