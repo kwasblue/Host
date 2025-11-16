@@ -7,6 +7,8 @@ from typing import Optional
 from .event_bus import EventBus
 from . import protocol, messages
 from .messages import MsgType 
+from robot_host.transports.tcp_transport import AsyncTcpTransport
+
 
 # Re-export / alias protocol constants for convenience
 MSG_PING       = protocol.MSG_PING
@@ -26,7 +28,7 @@ class AsyncRobotClient:
       - Provides async helpers like send_ping(), send_led_on(), etc.
     """
 
-    def __init__(self, transport, bus: Optional[EventBus] = None) -> None:
+    def __init__(self, transport: AsyncTcpTransport, bus: Optional[EventBus] = None) -> None:
         self.transport = transport
         self.bus = bus or EventBus()
         self._running = False
