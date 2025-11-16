@@ -98,6 +98,21 @@ async def main() -> None:
                         print("Angle must be a number")
                     else:
                         await client.send_servo_angle(servo_id=0, angle_deg=angle)
+            
+            elif lower.startswith("servo sweep"):
+                # e.g. "servo sweep 0 180"
+                parts = lower.split()
+                if len(parts) != 4:
+                    print("Usage: servo sweep <start_deg> <end_deg>")
+                else:
+                    try:
+                        start = float(parts[2])
+                        end = float(parts[3])
+                    except ValueError:
+                        print("Angles must be numbers")
+                    else:
+                        await client.smooth_servo_move(servo_id=0, start_deg=start, end_deg=end)
+
 
             else:
                 print(f"[Shell] Unknown command: {line}")

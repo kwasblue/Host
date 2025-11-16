@@ -234,3 +234,18 @@ class AsyncRobotClient:
         payload = json.dumps(cmd).encode("utf-8")
         frame = protocol.encode(protocol.MSG_CMD_JSON, payload)
         await self.transport.send_bytes(frame)
+    
+    async def smooth_servo_move(client, servo_id: int, start_deg: float, end_deg: float,
+                            steps: int = 30, total_time: float = 0.6) -> None:
+        if steps <= 0:
+            await client.send_servo_angle(servo_id=servo_id, angle_deg=end_deg)
+            return
+
+        step = (end_deg - start_deg) / steps
+        delay = total_time / steps
+
+        angle = start_deg
+        for _ in range(steps + 1):
+            await client.send_servo_angle(servo_id=servo_id, angle_deg=angle)
+            angle += step
+            await asyncio.sleep(delay)
