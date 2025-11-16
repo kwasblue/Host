@@ -1,122 +1,236 @@
-import time
-from typing import Any
-import struct
+# robot_host/core/client_async.py
+
+import asyncio
 import json
+from typing import Optional
 
-from robot_host.core.event_bus import EventBus
-from robot_host.core import protocol
-from robot_host.core.messages import MsgType
-from robot_host.transports.base_transport import BaseTransport
+from .event_bus import EventBus
+from . import protocol, messages
+from .messages import MsgType 
+
+# Re-export / alias protocol constants for convenience
+MSG_PING       = protocol.MSG_PING
+MSG_PONG       = protocol.MSG_PONG
+MSG_HEARTBEAT  = protocol.MSG_HEARTBEAT
+MSG_WHOAMI     = protocol.MSG_WHOAMI
+MSG_CMD_JSON   = protocol.MSG_CMD_JSON
 
 
-class RobotClient:
-    def __init__(self, transport: BaseTransport) -> None:
-        self.bus = EventBus()
+class AsyncRobotClient:
+    """
+    Async host-side client:
+      - Uses an async transport (e.g. AsyncTcpTransport)
+      - Frames are produced by protocol.encode(...) on the way out
+        and by transport + protocol.extract_frames(...) on the way in.
+      - Publishes events to EventBus
+      - Provides async helpers like send_ping(), send_led_on(), etc.
+    """
+
+    def __init__(self, transport, bus: Optional[EventBus] = None) -> None:
         self.transport = transport
+        self.bus = bus or EventBus()
+        self._running = False
+        self._seq = 0  # for JSON command sequencing if desired
+
+        # Transport will call _on_frame(body) where:
+        #   body[0] = msg_type
+        #   body[1:] = payload bytes
         self.transport.set_frame_handler(self._on_frame)
 
-    def start(self) -> None:
-        print("[RobotClient] Starting transport...")
-        self.transport.start()
+    # ---------- Lifecycle ----------
 
-    def stop(self) -> None:
-        print("[RobotClient] Stopping transport...")
-        self.transport.stop()
-
-    def send_whoami(self):
-        # Empty payload
-        self.transport.send_frame(msg_type=MsgType.WHOAMI, payload=b"")
-    
-    def send_json_cmd(self, cmd_dict: dict):
+    async def start(self) -> None:
         """
-        Send a high-level JSON command to the robot.
-        cmd_dict should look like:
-        {
-          "kind": "cmd",
-          "type": "CMD_LED_ON",
-          "payload": {...}
-        }
+        Start the transport (connect/reconnect loop).
         """
-        payload = json.dumps(cmd_dict).encode("utf-8")
-        # ✅ msg_type must be an int, not bytes
-        self.transport.send_frame(protocol.MSG_CMD_JSON, payload)
-    
-    def send_led_on(self):
-        self.send_json_cmd({
-            "kind": "cmd",
-            "type": "CMD_LED_ON",
-            "payload": {}
-        })
+        await self.transport.start()
+        self._running = True
+        print("[RobotClient] Started")
 
-    def send_led_off(self):
-        self.send_json_cmd({
-            "kind": "cmd",
-            "type": "CMD_LED_OFF",
-            "payload": {}
-        })
+    async def stop(self) -> None:
+        self._running = False
+        await self.transport.stop()
+        print("[RobotClient] Stopped")
 
-
-    # === incoming from MCU ===
+    # ---------- Incoming data path ----------
 
     def _on_frame(self, body: bytes) -> None:
+        """
+        Called by the transport whenever a complete framed message arrives.
+
+        body[0] = msg_type
+        body[1:] = payload bytes
+        """
         if not body:
             return
+
         msg_type = body[0]
         payload = body[1:]
 
-        now = time.time()
+        # Debug (optional)
+        # print(f"[RobotClient] Frame: type=0x{msg_type:02X}, len={len(payload)}")
 
-        mt = MsgType(msg_type)
-
-        if mt == MsgType.PONG:
-            self.bus.publish("pong", {"raw": payload, "ts": time.time()})
-        elif mt == MsgType.HEARTBEAT:
-            self.bus.publish("heartbeat", {"raw": payload, "ts": time.time()})
-        elif mt == MsgType.HELLO:
-            info = self._parse_hello(payload)
-            self.bus.publish("hello", info)
-            print(f"[Host] Connected to {info['name']} "
-                  f"(fw {info['fw']}, proto v{info['protocol_version']}, caps=0x{info['caps']:08X})")
-
-        if msg_type == protocol.MSG_HEARTBEAT:
-            self.bus.publish("heartbeat", {"ts": now, "raw": payload})
-        elif msg_type == protocol.MSG_PING:
-            self.bus.publish("ping", {"ts": now, "raw": payload})
-        elif msg_type == protocol.MSG_PONG:
-            self.bus.publish("pong", {"ts": now, "raw": payload})
+        if msg_type == MSG_PONG:
+            self.bus.publish("pong", {})
+        elif msg_type == MSG_HEARTBEAT:
+            self.bus.publish("heartbeat", {})
+        elif msg_type == MSG_CMD_JSON:
+            self._handle_json_payload(payload)
         else:
-            self.bus.publish("unknown", {"ts": now, "msg_type": msg_type, "raw": payload})
+            # Unknown / raw frame
+            self.bus.publish(
+                "raw_frame",
+                {"msg_type": msg_type, "payload": payload},
+            )
 
-    # === outgoing commands ===
+    def _handle_json_payload(self, payload: bytes) -> None:
+        """
+        Handle a JSON-encoded payload from the robot.
 
-    def send_ping(self) -> None:
-        print("[RobotClient] Sending PING")
-        self.transport.send_frame(protocol.MSG_PING)
+        The MCU side (CommandHandler / other modules) will typically send things like:
+          {"kind":"event","type":"HELLO","payload":{...}, "seq": N}
+        or telemetry/resp variants.
+        """
+        try:
+            text = payload.decode("utf-8")
+            obj = json.loads(text)
+        except Exception as e:
+            print(f"[RobotClient] Failed to decode JSON payload: {e!r}")
+            self.bus.publish(
+                "json_error",
+                {"error": str(e), "raw": payload},
+            )
+            return
 
-    def send_pong(self) -> None:
-        print("[RobotClient] Sending PONG")
-        self.transport.send_frame(protocol.MSG_PONG)
+        kind = obj.get("kind", "")
+        type_str = obj.get("type", "")
 
-    def _parse_hello(self, payload: bytes) -> dict:
-        # uint8 ver, major, minor, patch, uint32 robot_id
-        if len(payload) < 4 + 4 + 1:
-            return {"error": "HELLO payload too short", "raw": payload}
+        # Example: Identity / hello events
+        if type_str == "HELLO":
+            # Your IdentityModule on the MCU can build this.
+            self.bus.publish("hello", obj)
+        else:
+            # Generic JSON channel
+            self.bus.publish("json", obj)
 
-        ver, maj, minor, patch, robot_id = struct.unpack_from("<BBBBI", payload, 0)
-        offset = 4 + 4  # 4 u8 + 1 u32
+    # ---------- Outgoing commands ----------
 
-        name_len = payload[offset]
-        offset += 1
-        name = payload[offset:offset + name_len].decode("utf-8", errors="ignore")
-        offset += name_len
+    async def send_ping(self) -> None:
+        """
+        Send a simple PING frame (no payload).
+        """
+        await self.transport.send_frame(MSG_PING, b"")
 
-        (caps,) = struct.unpack_from("<I", payload, offset)
+    async def send_whoami(self) -> None:
+        """
+        Ask the MCU 'who are you?'. IdentityModule should respond with
+        some HELLO/identity JSON via MSG_CMD_JSON.
+        """
+        await self.transport.send_frame(MSG_WHOAMI, b"")
 
-        return {
-            "protocol_version": ver,
-            "fw": f"{maj}.{minor}.{patch}",
-            "robot_id": robot_id,
-            "name": name,
-            "caps": caps,
-            "ts": time.time(),
+    def _next_seq(self) -> int:
+        self._seq += 1
+        return self._seq
+
+    async def send_json_cmd(self, type_str: str, payload: Optional[dict] = None) -> None:
+        """
+        Generic helper to send a high-level JSON command to the robot.
+
+        This matches what your ESP32 CommandHandler expects:
+          {
+            "kind": "cmd",
+            "type": "<type_str>",         # e.g. "CMD_LED_ON"
+            "seq":  <int>,
+            "payload": { ... }
+          }
+        wrapped in a MSG_CMD_JSON frame.
+        """
+        cmd_obj = {
+            "kind": "cmd",
+            "type": type_str,
+            "seq": self._next_seq(),
+            "payload": payload or {},
         }
+        data = json.dumps(cmd_obj).encode("utf-8")
+        await self.transport.send_frame(MSG_CMD_JSON, data)
+
+    # Convenience helpers matching your MCU CommandHandler commands:
+
+    async def send_led_on(self) -> None:
+        # MCU side: case CmdType::LED_ON
+        await self.send_json_cmd("CMD_LED_ON")
+
+    async def send_led_off(self) -> None:
+        # MCU side: case CmdType::LED_OFF
+        await self.send_json_cmd("CMD_LED_OFF")
+
+    # You can add more:
+    # async def send_set_mode(self, mode: str) -> None:
+    #     await self.send_json_cmd("CMD_SET_MODE", {"mode": mode})
+    #
+    # async def send_set_vel(self, vx: float, omega: float) -> None:
+    #     await self.send_json_cmd("CMD_SET_VEL", {"vx": vx, "omega": omega})
+
+        # ---- Outgoing ----
+
+    async def send_ping(self) -> None:
+        frame = protocol.encode(protocol.MSG_PING)
+        await self.transport.send_bytes(frame)
+
+    async def send_whoami(self) -> None:
+        frame = protocol.encode(protocol.MSG_WHOAMI)
+        await self.transport.send_bytes(frame)
+
+    async def send_led_on(self) -> None:
+        """
+        Send a JSON command that your MCU CommandHandler understands,
+        framed as MSG_CMD_JSON + JSON payload.
+        """
+        cmd_obj = {
+            "kind": "cmd",
+            "type": "CMD_LED_ON",
+            "seq": 0,
+            "payload": {},
+        }
+        payload = json.dumps(cmd_obj).encode("utf-8")
+        await self.transport.send_frame(protocol.MSG_CMD_JSON, payload)
+
+    async def send_led_off(self) -> None:
+        cmd_obj = {
+            "kind": "cmd",
+            "type": "CMD_LED_OFF",
+            "seq": 0,
+            "payload": {},
+        }
+        payload = json.dumps(cmd_obj).encode("utf-8")
+        await self.transport.send_frame(protocol.MSG_CMD_JSON, payload)
+    
+    async def send_servo_attach(self, servo_id: int = 0) -> None:
+        cmd = {
+            "kind": "cmd",
+            "type": "CMD_SERVO_ATTACH",
+            "seq": 0,
+            "payload": {
+                "servo_id": servo_id,
+                "channel": 0,
+                "min_us": 1000,
+                "max_us": 2000,
+            },
+        }
+        payload = json.dumps(cmd).encode("utf-8")
+        frame = protocol.encode(protocol.MSG_CMD_JSON, payload)
+        await self.transport.send_bytes(frame)
+
+    async def send_servo_angle(self, servo_id: int, angle_deg: float) -> None:
+        cmd = {
+            "kind": "cmd",
+            "type": "CMD_SERVO_SET_ANGLE",
+            "seq": 0,
+            "payload": {
+                "servo_id": servo_id,
+                "angle_deg": angle_deg,
+            },
+        }
+        payload = json.dumps(cmd).encode("utf-8")
+        frame = protocol.encode(protocol.MSG_CMD_JSON, payload)
+        await self.transport.send_bytes(frame)

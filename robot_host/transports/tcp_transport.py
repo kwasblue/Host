@@ -1,64 +1,158 @@
-# host/robot_host/tcp_transport.py
-from __future__ import annotations
-import socket
-from typing import Optional
-
-from robot_host.transports.stream_transport import StreamTransport
+import asyncio
+from typing import Callable, Optional
+from robot_host.core import protocol
 
 
-class TcpTransport(StreamTransport):
+class AsyncTcpTransport:
     """
-    TCP transport built on top of StreamTransport.
+    Async TCP transport:
+      - Maintains a connection to (host, port)
+      - Reconnects on failure
+      - Reads BYTES from the socket, then uses protocol.extract_frames()
+        to turn them into framed messages.
+      - Calls a frame handler with `body` where:
+            body[0] = msg_type
+            body[1:] = payload
 
-    ESP32 runs a TCP server, Python connects as a client:
-      - host: IP address of ESP32 (e.g. "192.168.4.1" in AP mode or LAN IP)
-      - port: TCP port (must match WifiTransport on MCU side)
+      - Also exposes send_bytes() so higher-level code (AsyncRobotClient)
+        can send fully-encoded frames directly.
     """
 
-    def __init__(self, host: str, port: int) -> None:
-        super().__init__()
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        reconnect_delay: float = 5.0,
+    ) -> None:
         self.host = host
         self.port = port
+        self.reconnect_delay = reconnect_delay
 
-        self._sock: Optional[socket.socket] = None
+        self._reader: Optional[asyncio.StreamReader] = None
+        self._writer: Optional[asyncio.StreamWriter] = None
+        self._running: bool = False
 
-    # === StreamTransport hooks ===
+        # Frame handler: gets "body" (msg_type + payload), as produced by protocol.extract_frames
+        self._frame_handler: Callable[[bytes], None] = lambda frame: None
 
-    def _open(self) -> None:
-        # Create a blocking socket; StreamTransport's _reader_loop
-        # will handle timeouts by reading small chunks repeatedly.
-        self._sock = socket.create_connection((self.host, self.port))
-        # Optional: small timeout to avoid hanging forever in recv
-        self._sock.settimeout(0.1)
+        self._task: Optional[asyncio.Task] = None
+        self._rx_buffer = bytearray()
 
-    def _close(self) -> None:
-        if self._sock:
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def set_frame_handler(self, handler: Callable[[bytes], None]) -> None:
+        """
+        RobotClient will register its callback here.
+
+        handler(body: bytes):
+            body[0] = msg_type (int 0–255)
+            body[1:] = payload bytes
+        """
+        self._frame_handler = handler
+
+    async def start(self) -> None:
+        """Start connection/reconnect loop in the background."""
+        if self._task is None:
+            self._running = True
+            self._task = asyncio.create_task(self._run())
+
+    async def stop(self) -> None:
+        """Stop background loop and close the socket."""
+        self._running = False
+
+        if self._task:
+            self._task.cancel()
             try:
-                self._sock.close()
-            except OSError:
+                await self._task
+            except asyncio.CancelledError:
                 pass
-        self._sock = None
+            self._task = None
 
-    def _read_raw(self, n: int) -> bytes:
-        if not self._sock:
-            return b""
-        try:
-            data = self._sock.recv(n)
-            # If remote closed, recv() returns b""
-            return data
-        except socket.timeout:
-            return b""
-        except BlockingIOError:
-            return b""
-        except OSError as e:
-            print(f"[TcpTransport] recv error: {e}")
-            return b""
+        if self._writer:
+            self._writer.close()
+            try:
+                await self._writer.wait_closed()
+            except Exception:
+                pass
+            self._writer = None
+            self._reader = None
 
-    def _send_bytes(self, data: bytes) -> None:
-        if not self._sock:
-            raise RuntimeError("TCP socket not connected")
-        try:
-            self._sock.sendall(data)
-        except OSError as e:
-            print(f"[TcpTransport] send error: {e}")
-            raise
+    async def send_frame(self, msg_type: int, payload: bytes = b"") -> None:
+        """
+        Encode a frame using your existing protocol and send it.
+        Typically used if you want the transport to handle framing.
+        """
+        if not self._writer:
+            print("[TcpTransport] send_frame called while not connected")
+            return
+
+        frame = protocol.encode(msg_type, payload)
+        self._writer.write(frame)
+        await self._writer.drain()
+
+    async def send_bytes(self, data: bytes) -> None:
+        """
+        Send already-encoded bytes over the socket.
+
+        This is what AsyncRobotClient expects to call, since it often
+        builds the full frame itself (e.g. protocol.encode_json_cmd(...)).
+        """
+        if not self._writer:
+            print("[TcpTransport] send_bytes called while not connected")
+            return
+
+        self._writer.write(data)
+        await self._writer.drain()
+
+    # Optional alias if you ever called `send()` elsewhere
+    async def send(self, data: bytes) -> None:
+        await self.send_bytes(data)
+
+    # ------------------------------------------------------------------
+    # Internal async loop
+    # ------------------------------------------------------------------
+
+    async def _run(self) -> None:
+        """Main reconnect + read loop."""
+        while self._running:
+            try:
+                print(f"[TcpTransport] Connecting to {self.host}:{self.port} ...")
+                self._reader, self._writer = await asyncio.open_connection(
+                    self.host, self.port
+                )
+                print("[TcpTransport] Connected")
+
+                # Clear buffer on (re)connect
+                self._rx_buffer.clear()
+
+                # Read loop
+                while self._running:
+                    data = await self._reader.read(1024)
+                    if not data:
+                        print("[TcpTransport] Connection closed by peer")
+                        break
+
+                    # Accumulate and let protocol.extract_frames parse frames.
+                    self._rx_buffer.extend(data)
+
+                    # This will call self._frame_handler(body) for each frame found.
+                    protocol.extract_frames(self._rx_buffer, self._frame_handler)
+
+            except Exception as e:
+                print(f"[TcpTransport] Error: {e}")
+
+            # Cleanup and reconnect delay
+            if self._writer:
+                self._writer.close()
+                try:
+                    await self._writer.wait_closed()
+                except Exception:
+                    pass
+                self._writer = None
+                self._reader = None
+
+            if self._running:
+                print(f"[TcpTransport] Reconnecting in {self.reconnect_delay}s ...")
+                await asyncio.sleep(self.reconnect_delay)

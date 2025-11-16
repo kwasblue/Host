@@ -12,7 +12,7 @@ from pathlib import Path
 # Adjust these three paths to match your layout
 ROOT = Path(__file__).resolve().parent
 
-PINS_JSON = ROOT / "pins.json"
+PINS_JSON = Path("/Users/kwasiaddo/projects/Host/robot_host/pins.json")
 
 # Where to write the C++ header (ESP32 firmware project)
 CPP_OUT = Path("/Users/kwasiaddo/projects/PlatformIO/Projects/ESP32 MCU Host/include/config/PinConfig.h")
