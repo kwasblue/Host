@@ -13,7 +13,7 @@ import json
 ROOT = Path(__file__).resolve().parent
 
 # Location of pins.json (same as in your current gen_pins.py)
-PINS_JSON = Path("/Users/kwasiaddo/projects/Host/robot_host/pins.json")
+PINS_JSON = Path("/Users/kwasiaddo/projects/Host/robot_host/config/pins.json")
 
 
 # === 1) PINS: loaded from pins.json ===
@@ -39,6 +39,9 @@ PINS: dict[str, int] = _load_pins(PINS_JSON)
 # === 2) COMMANDS: your existing schema, unchanged in spirit ===
 
 COMMANDS: dict[str, dict] = {
+    # ----------------------------------------------------------------------
+    # Robot Core
+    # ----------------------------------------------------------------------
     "CMD_SET_MODE": {
         "kind": "cmd",
         "direction": "host->mcu",
@@ -89,6 +92,9 @@ COMMANDS: dict[str, dict] = {
         "payload": {},
     },
 
+    # ----------------------------------------------------------------------
+    # LED
+    # ----------------------------------------------------------------------
     "CMD_LED_ON": {
         "kind": "cmd",
         "direction": "host->mcu",
@@ -103,13 +109,16 @@ COMMANDS: dict[str, dict] = {
         "payload": {},
     },
 
+    # ----------------------------------------------------------------------
+    # GPIO
+    # ----------------------------------------------------------------------
     "CMD_GPIO_WRITE": {
         "kind": "cmd",
         "direction": "host->mcu",
         "description": "Write a digital value to a logical GPIO channel.",
         "payload": {
             "channel": {"type": "int", "required": True},
-            "value": {"type": "int", "required": True},  # 0 or 1
+            "value": {"type": "int", "required": True},
         },
     },
 
@@ -147,6 +156,9 @@ COMMANDS: dict[str, dict] = {
         },
     },
 
+    # ----------------------------------------------------------------------
+    # PWM
+    # ----------------------------------------------------------------------
     "CMD_PWM_SET": {
         "kind": "cmd",
         "direction": "host->mcu",
@@ -158,6 +170,9 @@ COMMANDS: dict[str, dict] = {
         },
     },
 
+    # ----------------------------------------------------------------------
+    # Servo
+    # ----------------------------------------------------------------------
     "CMD_SERVO_ATTACH": {
         "kind": "cmd",
         "direction": "host->mcu",
@@ -179,6 +194,7 @@ COMMANDS: dict[str, dict] = {
         },
     },
 
+    # *** UPDATED: supports `duration_ms` for servo interpolation ***
     "CMD_SERVO_SET_ANGLE": {
         "kind": "cmd",
         "direction": "host->mcu",
@@ -186,9 +202,18 @@ COMMANDS: dict[str, dict] = {
         "payload": {
             "servo_id": {"type": "int", "required": True},
             "angle_deg": {"type": "float", "required": True},
+            "duration_ms": {
+                "type": "int",
+                "required": False,
+                "default": 0,
+                "description": "Interpolation duration in milliseconds (0 = immediate).",
+            },
         },
     },
 
+    # ----------------------------------------------------------------------
+    # Stepper
+    # ----------------------------------------------------------------------
     "CMD_STEPPER_MOVE_REL": {
         "kind": "cmd",
         "direction": "host->mcu",
@@ -212,7 +237,25 @@ COMMANDS: dict[str, dict] = {
             "motor_id": {"type": "int", "required": True},
         },
     },
+
+    # ----------------------------------------------------------------------
+    # Logging (NEW)
+    # ----------------------------------------------------------------------
+    "CMD_SET_LOG_LEVEL": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set MCU logging verbosity level.",
+        "payload": {
+            "level": {
+                "type": "string",
+                "required": True,
+                "enum": ["debug", "info", "warn", "error", "off"],
+                "default": "info",
+            },
+        },
+    },
 }
+
 
 
 # === 3) GPIO logical channels ===

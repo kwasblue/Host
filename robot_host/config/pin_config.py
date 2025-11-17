@@ -2,6 +2,9 @@
 # Generated from pins.json by gen_pins.py
 
 LED_STATUS = 2
+MOTOR_LEFT_IN1 = 12
+MOTOR_LEFT_IN2 = 13
+MOTOR_LEFT_PWM = 14
 SERVO1_SIG = 18
 UART1_RX = 16
 UART1_TX = 17

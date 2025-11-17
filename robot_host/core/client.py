@@ -8,6 +8,8 @@ from .event_bus import EventBus
 from . import protocol, messages
 from .messages import MsgType 
 from robot_host.transports.tcp_transport import AsyncTcpTransport
+from robot_host.config.client_commands import RobotCommandsMixin
+
 
 
 # Re-export / alias protocol constants for convenience
@@ -18,7 +20,7 @@ MSG_WHOAMI     = protocol.MSG_WHOAMI
 MSG_CMD_JSON   = protocol.MSG_CMD_JSON
 
 
-class AsyncRobotClient:
+class AsyncRobotClient(RobotCommandsMixin):
     """
     Async host-side client:
       - Uses an async transport (e.g. AsyncTcpTransport)

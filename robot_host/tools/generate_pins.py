@@ -11,7 +11,7 @@ from platform_schema import ROOT, PINS, PINS_JSON
 CPP_OUT = Path("/Users/kwasiaddo/projects/PlatformIO/Projects/ESP32 MCU Host/include/config/PinConfig.h")
 
 # Where to write the python header (Host project)
-PY_OUT  = Path("/Users/kwasiaddo/projects/Host/robot_host/pin_config.py")
+PY_OUT  = Path("/Users/kwasiaddo/projects/Host/robot_host/config/pin_config.py")
 
 
 def generate_cpp(pins: dict) -> str:

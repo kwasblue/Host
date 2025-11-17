@@ -1,0 +1,266 @@
+{
+  "commands": {
+    "CMD_SET_MODE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set the high-level robot mode (e.g., IDLE, ARMED, ACTIVE).",
+      "payload": {
+        "mode": {
+          "type": "string",
+          "required": true,
+          "enum": [
+            "IDLE",
+            "ARMED",
+            "ACTIVE",
+            "CALIB"
+          ]
+        }
+      }
+    },
+    "CMD_SET_VEL": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set linear and angular velocity in robot frame.",
+      "payload": {
+        "vx": {
+          "type": "float",
+          "required": true,
+          "units": "m/s"
+        },
+        "omega": {
+          "type": "float",
+          "required": true,
+          "units": "rad/s"
+        },
+        "frame": {
+          "type": "string",
+          "required": false,
+          "default": "robot",
+          "enum": [
+            "robot",
+            "world"
+          ]
+        }
+      }
+    },
+    "CMD_STOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Stop all motion (soft stop).",
+      "payload": {}
+    },
+    "CMD_ESTOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Emergency stop, immediately disable motion.",
+      "payload": {}
+    },
+    "CMD_CLEAR_ESTOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Clear ESTOP and typically return to IDLE mode.",
+      "payload": {}
+    },
+    "CMD_LED_ON": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Turn status LED on.",
+      "payload": {}
+    },
+    "CMD_LED_OFF": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Turn status LED off.",
+      "payload": {}
+    },
+    "CMD_GPIO_WRITE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Write a digital value to a logical GPIO channel.",
+      "payload": {
+        "channel": {
+          "type": "int",
+          "required": true
+        },
+        "value": {
+          "type": "int",
+          "required": true
+        }
+      }
+    },
+    "CMD_GPIO_READ": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Read a digital value from a logical GPIO channel.",
+      "payload": {
+        "channel": {
+          "type": "int",
+          "required": true
+        }
+      }
+    },
+    "CMD_GPIO_TOGGLE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Toggle a logical GPIO channel.",
+      "payload": {
+        "channel": {
+          "type": "int",
+          "required": true
+        }
+      }
+    },
+    "CMD_GPIO_REGISTER_CHANNEL": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Register or re-map a logical GPIO channel to a physical pin.",
+      "payload": {
+        "channel": {
+          "type": "int",
+          "required": true
+        },
+        "pin": {
+          "type": "int",
+          "required": true
+        },
+        "mode": {
+          "type": "string",
+          "required": false,
+          "default": "output",
+          "enum": [
+            "output",
+            "input",
+            "input_pullup"
+          ]
+        }
+      }
+    },
+    "CMD_PWM_SET": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set PWM duty cycle for a logical channel.",
+      "payload": {
+        "channel": {
+          "type": "int",
+          "required": true
+        },
+        "duty": {
+          "type": "float",
+          "required": true
+        },
+        "freq_hz": {
+          "type": "float",
+          "required": false
+        }
+      }
+    },
+    "CMD_SERVO_ATTACH": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Attach a servo ID to a physical pin.",
+      "payload": {
+        "servo_id": {
+          "type": "int",
+          "required": true
+        },
+        "channel": {
+          "type": "int",
+          "required": true
+        },
+        "min_us": {
+          "type": "int",
+          "required": false,
+          "default": 1000
+        },
+        "max_us": {
+          "type": "int",
+          "required": false,
+          "default": 2000
+        }
+      }
+    },
+    "CMD_SERVO_DETACH": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Detach a servo ID.",
+      "payload": {
+        "servo_id": {
+          "type": "int",
+          "required": true
+        }
+      }
+    },
+    "CMD_SERVO_SET_ANGLE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set servo angle in degrees.",
+      "payload": {
+        "servo_id": {
+          "type": "int",
+          "required": true
+        },
+        "angle_deg": {
+          "type": "float",
+          "required": true
+        },
+        "duration_ms": {
+          "type": "int",
+          "required": false,
+          "default": 0,
+          "description": "Interpolation duration in milliseconds (0 = immediate)."
+        }
+      }
+    },
+    "CMD_STEPPER_MOVE_REL": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Move a stepper a relative number of steps.",
+      "payload": {
+        "motor_id": {
+          "type": "int",
+          "required": true
+        },
+        "steps": {
+          "type": "int",
+          "required": true
+        },
+        "speed_steps_s": {
+          "type": "float",
+          "required": false,
+          "default": 1000.0
+        }
+      }
+    },
+    "CMD_STEPPER_STOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Immediately stop a stepper motor.",
+      "payload": {
+        "motor_id": {
+          "type": "int",
+          "required": true
+        }
+      }
+    },
+    "CMD_SET_LOG_LEVEL": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set MCU logging verbosity level.",
+      "payload": {
+        "level": {
+          "type": "string",
+          "required": true,
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error",
+            "off"
+          ],
+          "default": "info"
+        }
+      }
+    }
+  },
+  "schema_version": 1
+}

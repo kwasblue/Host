@@ -112,6 +112,13 @@ async def main() -> None:
                         print("Angles must be numbers")
                     else:
                         await client.smooth_servo_move(servo_id=0, start_deg=start, end_deg=end)
+            elif lower.startswith("mode "):
+                # e.g. "mode active"
+                _, mode_str = lower.split(maxsplit=1)
+                mode = mode_str.upper()  # IDLE/ARMED/ACTIVE/CALIB
+                await client.cmd_set_mode(mode=mode)
+                print(f"[Shell] Requested mode: {mode}")
+
 
 
             else:

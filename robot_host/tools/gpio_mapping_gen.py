@@ -7,9 +7,9 @@ from pathlib import Path
 import json
 from platform_schema import ROOT, GPIO_CHANNELS, PINS
 
-JSON_OUT = ROOT / "gpio_channels.json"
+JSON_OUT = Path("/Users/kwasiaddo/projects/Host/robot_host/config/gpio_channels.json")
 CPP_OUT = Path("/Users/kwasiaddo/projects/PlatformIO/Projects/ESP32 MCU Host/include/config/GpioChannelDefs.h")
-PY_OUT  = ROOT / "Host/robot_host/gpio_channels.py"
+PY_OUT  = Path("/Users/kwasiaddo/projects/Host/robot_host/config/gpio_channels.py")
 
 
 def generate_json(channels: list[dict]) -> str:
