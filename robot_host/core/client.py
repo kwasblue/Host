@@ -1,40 +1,49 @@
 # robot_host/core/client_async.py
 
+from __future__ import annotations
+
 import asyncio
 import json
-from typing import Optional
+import inspect
+from typing import Optional, Protocol, Callable
 
 from .event_bus import EventBus
-from . import protocol, messages
-from .messages import MsgType 
-from robot_host.transports.tcp_transport import AsyncTcpTransport
+from . import protocol
+from .messages import MsgType
 from robot_host.config.client_commands import RobotCommandsMixin
 
+# Optional: a simple structural type for transports
+class HasSendBytes(Protocol):
+    async def send_bytes(self, data: bytes) -> None: ...
+    def set_frame_handler(self, handler: Callable[[bytes], None]) -> None: ...
+    def start(self) -> object: ...
+    def stop(self) -> object: ...
 
 
 # Re-export / alias protocol constants for convenience
-MSG_PING       = protocol.MSG_PING
-MSG_PONG       = protocol.MSG_PONG
-MSG_HEARTBEAT  = protocol.MSG_HEARTBEAT
-MSG_WHOAMI     = protocol.MSG_WHOAMI
-MSG_CMD_JSON   = protocol.MSG_CMD_JSON
+MSG_PING      = protocol.MSG_PING
+MSG_PONG      = protocol.MSG_PONG
+MSG_HEARTBEAT = protocol.MSG_HEARTBEAT
+MSG_WHOAMI    = protocol.MSG_WHOAMI
+MSG_CMD_JSON  = protocol.MSG_CMD_JSON
 
 
 class AsyncRobotClient(RobotCommandsMixin):
     """
     Async host-side client:
-      - Uses an async transport (e.g. AsyncTcpTransport)
+      - Uses an async-ish transport (AsyncTcpTransport, SerialTransport via StreamTransport, etc.)
+      - Transport exposes async send_bytes(data: bytes)
       - Frames are produced by protocol.encode(...) on the way out
         and by transport + protocol.extract_frames(...) on the way in.
       - Publishes events to EventBus
-      - Provides async helpers like send_ping(), send_led_on(), etc.
+      - Provides async helpers like send_ping(), send_led_on(), servo commands, etc.
     """
 
-    def __init__(self, transport: AsyncTcpTransport, bus: Optional[EventBus] = None) -> None:
+    def __init__(self, transport: HasSendBytes, bus: Optional[EventBus] = None) -> None:
         self.transport = transport
         self.bus = bus or EventBus()
         self._running = False
-        self._seq = 0  # for JSON command sequencing if desired
+        self._seq = 0  # for JSON command sequencing
 
         # Transport will call _on_frame(body) where:
         #   body[0] = msg_type
@@ -45,16 +54,40 @@ class AsyncRobotClient(RobotCommandsMixin):
 
     async def start(self) -> None:
         """
-        Start the transport (connect/reconnect loop).
+        Start the transport.
+
+        Compatible with both sync and async transport.start().
         """
-        await self.transport.start()
+        if self.transport is None:
+            return
+
+        start_fn = getattr(self.transport, "start", None)
+        if start_fn is None:
+            raise RuntimeError("Transport has no start() method")
+
+        result = start_fn()
+        if inspect.isawaitable(result):
+            await result
+
         self._running = True
         print("[RobotClient] Started")
 
     async def stop(self) -> None:
-        self._running = False
-        await self.transport.stop()
-        print("[RobotClient] Stopped")
+        """
+        Stop the client and underlying transport.
+
+        Compatible with both sync and async transport.stop().
+        """
+        if self.transport is None:
+            return
+
+        stop_fn = getattr(self.transport, "stop", None)
+        if stop_fn is None:
+            return
+
+        result = stop_fn()
+        if inspect.isawaitable(result):
+            await result
 
     # ---------- Incoming data path ----------
 
@@ -70,9 +103,6 @@ class AsyncRobotClient(RobotCommandsMixin):
 
         msg_type = body[0]
         payload = body[1:]
-
-        # Debug (optional)
-        # print(f"[RobotClient] Frame: type=0x{msg_type:02X}, len={len(payload)}")
 
         if msg_type == MSG_PONG:
             self.bus.publish("pong", {})
@@ -90,10 +120,6 @@ class AsyncRobotClient(RobotCommandsMixin):
     def _handle_json_payload(self, payload: bytes) -> None:
         """
         Handle a JSON-encoded payload from the robot.
-
-        The MCU side (CommandHandler / other modules) will typically send things like:
-          {"kind":"event","type":"HELLO","payload":{...}, "seq": N}
-        or telemetry/resp variants.
         """
         try:
             text = payload.decode("utf-8")
@@ -106,48 +132,38 @@ class AsyncRobotClient(RobotCommandsMixin):
             )
             return
 
-        kind = obj.get("kind", "")
         type_str = obj.get("type", "")
 
-        # Example: Identity / hello events
         if type_str == "HELLO":
-            # Your IdentityModule on the MCU can build this.
             self.bus.publish("hello", obj)
         else:
-            # Generic JSON channel
             self.bus.publish("json", obj)
 
     # ---------- Outgoing commands ----------
-
-    async def send_ping(self) -> None:
-        """
-        Send a simple PING frame (no payload).
-        """
-        await self.transport.send_frame(MSG_PING, b"")
-
-    async def send_whoami(self) -> None:
-        """
-        Ask the MCU 'who are you?'. IdentityModule should respond with
-        some HELLO/identity JSON via MSG_CMD_JSON.
-        """
-        await self.transport.send_frame(MSG_WHOAMI, b"")
 
     def _next_seq(self) -> int:
         self._seq += 1
         return self._seq
 
+    async def _send_frame(self, msg_type: int, payload: bytes = b"") -> None:
+        """
+        Helper: encode and send a framed message via the transport.
+        Uses async transport.send_bytes(...) so it works with TCP and Serial.
+        """
+        frame = protocol.encode(msg_type, payload)
+        await self.transport.send_bytes(frame)
+
+    async def send_ping(self) -> None:
+        """Send a simple PING frame (no payload)."""
+        await self._send_frame(MSG_PING, b"")
+
+    async def send_whoami(self) -> None:
+        """Ask the MCU 'who are you?'."""
+        await self._send_frame(MSG_WHOAMI, b"")
+
     async def send_json_cmd(self, type_str: str, payload: Optional[dict] = None) -> None:
         """
         Generic helper to send a high-level JSON command to the robot.
-
-        This matches what your ESP32 CommandHandler expects:
-          {
-            "kind": "cmd",
-            "type": "<type_str>",         # e.g. "CMD_LED_ON"
-            "seq":  <int>,
-            "payload": { ... }
-          }
-        wrapped in a MSG_CMD_JSON frame.
         """
         cmd_obj = {
             "kind": "cmd",
@@ -156,7 +172,7 @@ class AsyncRobotClient(RobotCommandsMixin):
             "payload": payload or {},
         }
         data = json.dumps(cmd_obj).encode("utf-8")
-        await self.transport.send_frame(MSG_CMD_JSON, data)
+        await self._send_frame(MSG_CMD_JSON, data)
 
     # Convenience helpers matching your MCU CommandHandler commands:
 
@@ -168,81 +184,36 @@ class AsyncRobotClient(RobotCommandsMixin):
         # MCU side: case CmdType::LED_OFF
         await self.send_json_cmd("CMD_LED_OFF")
 
-    # You can add more:
-    # async def send_set_mode(self, mode: str) -> None:
-    #     await self.send_json_cmd("CMD_SET_MODE", {"mode": mode})
-    #
-    # async def send_set_vel(self, vx: float, omega: float) -> None:
-    #     await self.send_json_cmd("CMD_SET_VEL", {"vx": vx, "omega": omega})
-
-        # ---- Outgoing ----
-
-    async def send_ping(self) -> None:
-        frame = protocol.encode(protocol.MSG_PING)
-        await self.transport.send_bytes(frame)
-
-    async def send_whoami(self) -> None:
-        frame = protocol.encode(protocol.MSG_WHOAMI)
-        await self.transport.send_bytes(frame)
-
-    async def send_led_on(self) -> None:
-        """
-        Send a JSON command that your MCU CommandHandler understands,
-        framed as MSG_CMD_JSON + JSON payload.
-        """
-        cmd_obj = {
-            "kind": "cmd",
-            "type": "CMD_LED_ON",
-            "seq": 0,
-            "payload": {},
-        }
-        payload = json.dumps(cmd_obj).encode("utf-8")
-        await self.transport.send_frame(protocol.MSG_CMD_JSON, payload)
-
-    async def send_led_off(self) -> None:
-        cmd_obj = {
-            "kind": "cmd",
-            "type": "CMD_LED_OFF",
-            "seq": 0,
-            "payload": {},
-        }
-        payload = json.dumps(cmd_obj).encode("utf-8")
-        await self.transport.send_frame(protocol.MSG_CMD_JSON, payload)
-    
     async def send_servo_attach(self, servo_id: int = 0) -> None:
         cmd = {
-            "kind": "cmd",
-            "type": "CMD_SERVO_ATTACH",
-            "seq": 0,
-            "payload": {
-                "servo_id": servo_id,
-                "channel": 0,
-                "min_us": 1000,
-                "max_us": 2000,
-            },
+            "servo_id": servo_id,
+            "channel": 0,
+            "min_us": 500,
+            "max_us": 2500,
         }
-        payload = json.dumps(cmd).encode("utf-8")
-        frame = protocol.encode(protocol.MSG_CMD_JSON, payload)
-        await self.transport.send_bytes(frame)
+        await self.send_json_cmd("CMD_SERVO_ATTACH", cmd)
 
     async def send_servo_angle(self, servo_id: int, angle_deg: float) -> None:
         cmd = {
-            "kind": "cmd",
-            "type": "CMD_SERVO_SET_ANGLE",
-            "seq": 0,
-            "payload": {
-                "servo_id": servo_id,
-                "angle_deg": angle_deg,
-            },
+            "servo_id": servo_id,
+            "angle_deg": angle_deg,
         }
-        payload = json.dumps(cmd).encode("utf-8")
-        frame = protocol.encode(protocol.MSG_CMD_JSON, payload)
-        await self.transport.send_bytes(frame)
-    
-    async def smooth_servo_move(client, servo_id: int, start_deg: float, end_deg: float,
-                            steps: int = 30, total_time: float = 0.6) -> None:
+        await self.send_json_cmd("CMD_SERVO_SET_ANGLE", cmd)
+
+    async def smooth_servo_move(
+        self,
+        servo_id: int,
+        start_deg: float,
+        end_deg: float,
+        steps: int = 30,
+        total_time: float = 1,
+    ) -> None:
+        """
+        Convenience helper to sweep a servo from start_deg to end_deg
+        in 'steps' increments over 'total_time' seconds.
+        """
         if steps <= 0:
-            await client.send_servo_angle(servo_id=servo_id, angle_deg=end_deg)
+            await self.send_servo_angle(servo_id=servo_id, angle_deg=end_deg)
             return
 
         step = (end_deg - start_deg) / steps
@@ -250,6 +221,6 @@ class AsyncRobotClient(RobotCommandsMixin):
 
         angle = start_deg
         for _ in range(steps + 1):
-            await client.send_servo_angle(servo_id=servo_id, angle_deg=angle)
+            await self.send_servo_angle(servo_id=servo_id, angle_deg=angle)
             angle += step
             await asyncio.sleep(delay)

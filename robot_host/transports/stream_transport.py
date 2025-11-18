@@ -67,3 +67,17 @@ class StreamTransport(BaseTransport, ABC):
             except Exception as e:
                 print(f"[StreamTransport] error: {e}")
                 time.sleep(0.5)
+    
+    def _send_bytes(self, data: bytes) -> None:
+        # ✅ Auto-open if needed
+        if self._ser is None or not self._ser.is_open:
+            self._open()
+
+        self._ser.write(data)
+
+    async def send_bytes(self, data: bytes) -> None:
+            """
+            Async-friendly wrapper so AsyncRobotClient can `await transport.send_bytes(...)`.
+            For now, we just write synchronously; that's fine for small frames.
+            """
+            self._send_bytes(data)

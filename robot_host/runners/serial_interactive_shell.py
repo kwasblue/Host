@@ -1,11 +1,11 @@
 # robot_host/runners/interactive_shell.py
 
 import asyncio
-from typing import Callable, Iterable
+from typing import Callable
 
 from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.tcp_transport import AsyncTcpTransport
 from robot_host.transports.serial_transport import SerialTransport
+# from robot_host.transports.tcp_transport import AsyncTcpTransport  # not needed right now
 
 
 async def ainput(prompt: str = "") -> str:
@@ -16,7 +16,6 @@ async def ainput(prompt: str = "") -> str:
     try:
         return await loop.run_in_executor(None, lambda: input(prompt))
     except KeyboardInterrupt:
-        # Propagate so main loop can catch it
         raise
 
 
@@ -26,58 +25,15 @@ def _print_event(tag: str) -> Callable[[dict], None]:
     return _handler
 
 
-async def pick_reachable_host(
-    hosts: Iterable[str],
-    port: int,
-    timeout: float = 1.0,
-) -> str:
-    """
-    Try each host in order, return the first that accepts a TCP connection.
-
-    This does an actual TCP connect probe and immediately closes it.
-    Raises RuntimeError if no hosts are reachable.
-    """
-    for host in hosts:
-        try:
-            print(f"[Shell] Probing {host}:{port} ...")
-            conn_coro = asyncio.open_connection(host, port)
-            reader, writer = await asyncio.wait_for(conn_coro, timeout=timeout)
-            # We just probed connectivity – close this test connection.
-            writer.close()
-            await writer.wait_closed()
-            print(f"[Shell] Selected host: {host}:{port}")
-            return host
-        except Exception as e:
-            print(f"[Shell] Host {host}:{port} not reachable: {e!r}")
-
-    raise RuntimeError("[Shell] No reachable robot host (STA or AP).")
-
-
 async def main() -> None:
-    # --- Network configuration ---
-    host_sta = "10.0.0.107"     # ESP32 in STA mode on home Wi-Fi
-    host_ap  = "192.168.4.1"    # ESP32 AP IP (RobotAP)
-    port = 3333
-
-    # Optional serial fallback (leave commented if you don't want it yet)
+    # ---- Serial config (Mac) ----
+    # Adjust this if your device name is different.
+    # You can check with:  ls /dev/cu.*
     serial_dev = "/dev/cu.usbserial-0001"
+    baudrate = 115200
 
-    # --- Choose transport: prefer STA, fall back to AP, then optional serial ---
-    try:
-        selected_host = await pick_reachable_host([host_sta, host_ap], port, timeout=1.0)
-        transport = AsyncTcpTransport(selected_host, port)
-        print(f"[Shell] Using TCP transport on {selected_host}:{port}")
-    except RuntimeError as e:
-        # GRACEFUL EXIT: no traceback, just a clear message
-        print(str(e))
-        print("")
-        print("Hints:")
-        print("  • Make sure the robot is powered on.")
-        print("  • For STA: robot and laptop must be on the same Wi-Fi (host_sta).")
-        print("  • For AP: connect to the robot's Wi-Fi (RobotAP) so 192.168.4.1 is reachable.")
-        print("")
-        print("[Shell] Exiting because no robot could be found.")
-        return  # <- just end main(), no error
+    print(f"[Shell] Using SERIAL transport on {serial_dev} @ {baudrate} baud")
+    transport = SerialTransport(serial_dev, baudrate=baudrate)
 
     client = AsyncRobotClient(transport=transport)
 
@@ -88,10 +44,10 @@ async def main() -> None:
     client.bus.subscribe("json",      _print_event("JSON"))
     client.bus.subscribe("raw_frame", _print_event("RAW"))
 
-    client.start()
+    await client.start()
 
     print("")
-    print("=== Robot Interactive Shell ===")
+    print("=== Robot Interactive Shell (Serial) ===")
     print("Available commands:")
     print("  ping                 - send ping")
     print("  whoami               - ask robot identity")
@@ -137,7 +93,6 @@ async def main() -> None:
 
             # --- Servo commands ---
             elif lower == "servo attach":
-                # Uses default min/max from the client-side helper
                 await client.send_servo_attach(servo_id=0)
 
             elif lower.startswith("servo angle"):
@@ -153,7 +108,6 @@ async def main() -> None:
                         await client.send_servo_angle(servo_id=0, angle_deg=angle)
 
             elif lower.startswith("servo sweep"):
-                # e.g. "servo sweep 0 180"
                 parts = lower.split()
                 if len(parts) != 4:
                     print("Usage: servo sweep <start_deg> <end_deg>")
@@ -168,29 +122,24 @@ async def main() -> None:
 
             # --- Mode command ---
             elif lower.startswith("mode "):
-                # e.g. "mode active"
                 _, mode_str = lower.split(maxsplit=1)
-                mode = mode_str.upper()  # IDLE/ARMED/ACTIVE/CALIB
+                mode = mode_str.upper()
                 await client.cmd_set_mode(mode=mode)
                 print(f"[Shell] Requested mode: {mode}")
 
-            # --- Unknown command ---
             else:
                 print(f"[Shell] Unknown command: {line}")
                 print("  Commands: ping | whoami | led on | led off | mode <name> |")
                 print("            servo attach | servo angle <deg> | servo sweep a b | quit")
 
     finally:
-        # Ensure transport shuts down cleanly
         print("[Shell] Shutting down client...")
         await client.stop()
         print("[Shell] Done.")
 
 
 if __name__ == "__main__":
-    # Protect asyncio.run() from showing nasty tracebacks on Ctrl-C
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
         print("[Shell] Force-quit.")
-

@@ -13,7 +13,7 @@ async def main() -> None:
     host_sta = "10.0.0.107"
     port = 3333
 
-    transport = AsyncTcpTransport(host_sta, port)
+    transport = AsyncTcpTransport(host_ap, port)
     client = AsyncRobotClient(transport)
 
     # Subscribe to events
@@ -30,11 +30,11 @@ async def main() -> None:
         while True:
             now = loop.time()
             if now - last_ping >= 5.0:
-                await client.send_ping()
-                await client.send_led_on()
-                await client.send_whoami()
-                await asyncio.sleep(2.0)
-                await client.send_led_off()
+                #await client.send_ping()
+                #await client.send_led_on()
+                #await client.send_whoami()
+                await asyncio.sleep(10.0)
+                #await client.send_led_off()
                 last_ping = now
             await asyncio.sleep(0.1)
     except KeyboardInterrupt:
