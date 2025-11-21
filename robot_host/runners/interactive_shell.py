@@ -6,6 +6,8 @@ from typing import Callable, Iterable
 from robot_host.core.client import AsyncRobotClient
 from robot_host.transports.tcp_transport import AsyncTcpTransport
 from robot_host.transports.serial_transport import SerialTransport
+from robot_host.tools.imu_calibrator import ImuCalibrator  # adjust import path as needed
+
 
 
 async def ainput(prompt: str = "") -> str:
@@ -90,6 +92,7 @@ async def main() -> None:
     client.bus.subscribe("telemetry", _print_event("TELEM"))
 
     await client.start()
+    calibrator = ImuCalibrator(client)
 
     print("")
     print("=== Robot Interactive Shell ===")
@@ -121,8 +124,26 @@ async def main() -> None:
         dist = ultra.get("distance_cm")
         if dist is not None:
             print(f"[ULTRA] sensor 0: {dist:.1f} cm")
+    
+    def _print_imu(imu: dict) -> None:
+        if not imu.get("ok", False):
+            # IMU offline or bad sample; you can make this quieter if you want
+            # print("[IMU] offline or bad sample")
+            return
+        roll = imu.get("roll_deg")
+        pitch = imu.get("pitch_deg")
+        acc_mag = imu.get("acc_mag_g")
+        temp = imu.get("temp_c")
+
+        print(
+            f"[IMU] roll={roll:7.2f}°, "
+            f"pitch={pitch:7.2f}°, "
+            f"|a|={acc_mag:5.3f} g, "
+            f"T={temp:5.2f} °C"
+        )
 
     client.bus.subscribe("telemetry.ultrasonic", _print_ultra)
+    client.bus.subscribe("telemetry.imu", _print_imu)
     try:
         while True:
             try:
@@ -184,6 +205,10 @@ async def main() -> None:
                         print("Angles must be numbers")
                     else:
                         await client.smooth_servo_move(servo_id=0, start_deg=start, end_deg=end)
+            # imu calibration:
+            elif lower == "imu calibrate":
+                # This will block the shell until samples are collected
+                await calibrator.run()
             
             elif lower == "ultrasonic attach":
                 await client.cmd_ultrasonic_attach()

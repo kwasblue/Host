@@ -6,7 +6,7 @@ import asyncio
 import json
 import inspect
 from typing import Optional, Protocol, Callable
-
+import numpy as np
 from .event_bus import EventBus
 from . import protocol
 from .messages import MsgType
@@ -49,6 +49,9 @@ class AsyncRobotClient(RobotCommandsMixin):
         #   body[0] = msg_type
         #   body[1:] = payload bytes
         self.transport.set_frame_handler(self._on_frame)
+        self._accel_bias = np.zeros(3, dtype=float)
+        self._gyro_bias = np.zeros(3, dtype=float)
+
 
     # ---------- Lifecycle ----------
 
@@ -150,6 +153,13 @@ class AsyncRobotClient(RobotCommandsMixin):
             ultra = data.get("ultrasonic")
             if ultra is not None:
                 self.bus.publish("telemetry.ultrasonic", ultra)
+        
+                    # IMU telemetry: feed into math helper
+            imu = data.get("imu")
+            if imu is not None:
+                ts_ms = obj.get("ts_ms")
+                self._process_imu_telemetry(imu, ts_ms)
+
 
             return
 
@@ -247,3 +257,64 @@ class AsyncRobotClient(RobotCommandsMixin):
             await self.send_servo_angle(servo_id=servo_id, angle_deg=angle)
             angle += step
             await asyncio.sleep(delay)
+
+    def _process_imu_telemetry(self, imu: dict, ts_ms: Optional[int]) -> None:
+        online = imu.get("online", False)
+        ok = imu.get("ok", False)
+
+        if not online or not ok:
+            self.bus.publish(
+                "telemetry.imu",
+                {"ts_ms": ts_ms, "online": online, "ok": ok},
+            )
+            return
+
+        # Make a vector
+        acc = np.array([
+            float(imu.get("ax_g", 0.0)),
+            float(imu.get("ay_g", 0.0)),
+            float(imu.get("az_g", 0.0)),
+        ])
+
+        gyro = np.array([
+            float(imu.get("gx_dps", 0.0)),
+            float(imu.get("gy_dps", 0.0)),
+            float(imu.get("gz_dps", 0.0)),
+        ])
+
+        ax, ay, az = acc
+        gx, gy, gz = gyro
+
+        acc_mag = np.linalg.norm(acc)
+
+        roll_rad = np.arctan2(ay, az)
+        pitch_rad = np.arctan2(-ax, np.sqrt(ay * ay + az * az))
+
+        roll_deg = np.degrees(roll_rad)
+        pitch_deg = np.degrees(pitch_rad)
+
+        temp_c = float(imu.get("temp_c", 0.0))
+
+        out = {
+            "ts_ms": ts_ms,
+            "online": online,
+            "ok": ok,
+            "ax_g": float(ax),
+            "ay_g": float(ay),
+            "az_g": float(az),
+            "gx_dps": float(gx),
+            "gy_dps": float(gy),
+            "gz_dps": float(gz),
+            "temp_c": temp_c,
+            "acc_mag_g": float(acc_mag),
+            "roll_rad": float(roll_rad),
+            "pitch_rad": float(pitch_rad),
+            "roll_deg": float(roll_deg),
+            "pitch_deg": float(pitch_deg),
+        }
+
+        self.bus.publish("telemetry.imu", out)
+    
+    def set_imu_biases(self, accel_bias: np.ndarray, gyro_bias: np.ndarray) -> None:
+        self._accel_bias = np.asarray(accel_bias, dtype=float)
+        self._gyro_bias = np.asarray(gyro_bias, dtype=float)
