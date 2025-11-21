@@ -29,7 +29,7 @@ def _print_event(tag: str) -> Callable[[dict], None]:
 async def pick_reachable_host(
     hosts: Iterable[str],
     port: int,
-    timeout: float = 1.0,
+    timeout: float = 10,
 ) -> str:
     """
     Try each host in order, return the first that accepts a TCP connection.
@@ -55,7 +55,7 @@ async def pick_reachable_host(
 
 async def main() -> None:
     # --- Network configuration ---
-    host_sta = "10.0.0.107"     # ESP32 in STA mode on home Wi-Fi
+    host_sta = "10.0.0.61"     # ESP32 in STA mode on home Wi-Fi
     host_ap  = "192.168.4.1"    # ESP32 AP IP (RobotAP)
     port = 3333
 
@@ -87,8 +87,9 @@ async def main() -> None:
     client.bus.subscribe("hello",     _print_event("HELLO"))
     client.bus.subscribe("json",      _print_event("JSON"))
     client.bus.subscribe("raw_frame", _print_event("RAW"))
+    client.bus.subscribe("telemetry", _print_event("TELEM"))
 
-    client.start()
+    await client.start()
 
     print("")
     print("=== Robot Interactive Shell ===")
@@ -101,9 +102,27 @@ async def main() -> None:
     print("  servo attach         - attach servo on channel 0")
     print("  servo angle <deg>    - move servo 0 to angle")
     print("  servo sweep a b      - sweep servo 0 from a→b smoothly")
+    print("  ultrasonic attach     - attach ultrasonic sensor 0")
+    print("  read ultrasonic       - single ultrasonic read (ACK)")
     print("  q / quit / exit      - quit")
-    print("")
+    print("  Commands: ping | whoami | led on | led off | mode <name> |")
+    print("            servo attach | servo angle <deg> | servo sweep a b |")
+    print("            ultrasonic attach | read ultrasonic | quit")
 
+    print("")
+    
+    def _print_ultra(ultra: dict) -> None:
+        if not ultra.get("attached"):
+            print("[ULTRA] sensor 0 not attached")
+            return
+        if not ultra.get("ok", False):
+            print("[ULTRA] read error / timeout")
+            return
+        dist = ultra.get("distance_cm")
+        if dist is not None:
+            print(f"[ULTRA] sensor 0: {dist:.1f} cm")
+
+    client.bus.subscribe("telemetry.ultrasonic", _print_ultra)
     try:
         while True:
             try:
@@ -165,6 +184,12 @@ async def main() -> None:
                         print("Angles must be numbers")
                     else:
                         await client.smooth_servo_move(servo_id=0, start_deg=start, end_deg=end)
+            
+            elif lower == "ultrasonic attach":
+                await client.cmd_ultrasonic_attach()
+            
+            elif lower == "read ultrasonic":
+                await client.cmd_ultrasonic_read()
 
             # --- Mode command ---
             elif lower.startswith("mode "):

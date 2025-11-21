@@ -30,3 +30,5 @@ robot_host/config/commands.json
 robot_host/config/pins.json
 robot_host/config/gpio_channels.json
 robot_host/config/client_commands.py
+
+robot_host/scratch

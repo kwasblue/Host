@@ -238,6 +238,50 @@ COMMANDS: dict[str, dict] = {
         },
     },
 
+    "CMD_ULTRASONIC_ATTACH": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Attach/configure an ultrasonic sensor for the given logical sensor_id.",
+        "payload": {
+            # Which UltrasonicManager slot to use (0..MAX_SENSORS-1)
+            "sensor_id": {
+                "type": "int",
+                "required": True,
+                "default": 0,
+            },
+        },
+    },
+
+    "CMD_ULTRASONIC_READ": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Trigger a single ultrasonic distance measurement.",
+        "payload": {
+            # Same logical sensor_id you attached earlier
+            "sensor_id": {
+                "type": "int",
+                "required": True,
+                "default": 0,
+            },
+        },
+    },
+    
+    # ----------------------------------------------------------------------
+    # Telemetry control
+    # ----------------------------------------------------------------------
+    "CMD_TELEM_SET_INTERVAL": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set telemetry publish interval in milliseconds (0 = disable).",
+        "payload": {
+            "interval_ms": {
+                "type": "int",
+                "required": True,
+                "default": 100,  # 10 Hz
+            },
+        },
+    },
+
     # ----------------------------------------------------------------------
     # Logging (NEW)
     # ----------------------------------------------------------------------
@@ -269,19 +313,19 @@ GPIO_CHANNELS: list[dict] = [
         "pin_name": "LED_STATUS",
         "mode": "output",
     },
-    # later:
-    # {
-    #     "name": "ULTRASONIC_TRIG",
-    #     "channel": 1,
-    #     "pin_name": "ULTRASONIC_TRIG",
-    #     "mode": "output",
-    # },
-    # {
-    #     "name": "ULTRASONIC_ECHO",
-    #     "channel": 2,
-    #     "pin_name": "ULTRASONIC_ECHO",
-    #     "mode": "input",
-    # },
+
+    {
+        "name": "ULTRASONIC_TRIG",
+        "channel": 1,
+        "pin_name": "ULTRA0_TRIG",
+        "mode": "output",
+    },
+    {
+        "name": "ULTRASONIC_ECHO",
+        "channel": 2,
+        "pin_name": "ULTRA0_ECHO",
+        "mode": "input",
+    },
 ]
 
 

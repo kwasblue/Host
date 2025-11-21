@@ -85,7 +85,7 @@ class RobotCommandsMixin:
             payload['freq_hz'] = freq_hz
         await self.send_json_cmd('CMD_PWM_SET', payload)
 
-    async def cmd_servo_attach(self, servo_id: int, channel: int, min_us: int = 500, max_us: int = 2500) -> None:
+    async def cmd_servo_attach(self, servo_id: int, channel: int, min_us: int = 1000, max_us: int = 2000) -> None:
         """Attach a servo ID to a physical pin. (CMD_SERVO_ATTACH)"""
         payload: dict[str, Any] = {}
         payload['servo_id'] = servo_id
@@ -121,6 +121,24 @@ class RobotCommandsMixin:
         payload: dict[str, Any] = {}
         payload['motor_id'] = motor_id
         await self.send_json_cmd('CMD_STEPPER_STOP', payload)
+
+    async def cmd_ultrasonic_attach(self, sensor_id: int = 0) -> None:
+        """Attach/configure an ultrasonic sensor for the given logical sensor_id. (CMD_ULTRASONIC_ATTACH)"""
+        payload: dict[str, Any] = {}
+        payload['sensor_id'] = sensor_id
+        await self.send_json_cmd('CMD_ULTRASONIC_ATTACH', payload)
+
+    async def cmd_ultrasonic_read(self, sensor_id: int = 0) -> None:
+        """Trigger a single ultrasonic distance measurement. (CMD_ULTRASONIC_READ)"""
+        payload: dict[str, Any] = {}
+        payload['sensor_id'] = sensor_id
+        await self.send_json_cmd('CMD_ULTRASONIC_READ', payload)
+
+    async def cmd_telem_set_interval(self, interval_ms: int = 100) -> None:
+        """Set telemetry publish interval in milliseconds (0 = disable). (CMD_TELEM_SET_INTERVAL)"""
+        payload: dict[str, Any] = {}
+        payload['interval_ms'] = interval_ms
+        await self.send_json_cmd('CMD_TELEM_SET_INTERVAL', payload)
 
     async def cmd_set_log_level(self, level: str = 'info') -> None:
         """Set MCU logging verbosity level. (CMD_SET_LOG_LEVEL)"""

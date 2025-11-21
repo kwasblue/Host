@@ -5,6 +5,18 @@
       "mode": "output",
       "name": "LED_STATUS",
       "pin_name": "LED_STATUS"
+    },
+    {
+      "channel": 1,
+      "mode": "output",
+      "name": "ULTRASONIC_TRIG",
+      "pin_name": "ULTRA0_TRIG"
+    },
+    {
+      "channel": 2,
+      "mode": "input",
+      "name": "ULTRASONIC_ECHO",
+      "pin_name": "ULTRA0_ECHO"
     }
   ],
   "schema_version": 1

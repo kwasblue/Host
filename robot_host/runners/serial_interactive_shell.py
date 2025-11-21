@@ -29,11 +29,13 @@ async def main() -> None:
     # ---- Serial config (Mac) ----
     # Adjust this if your device name is different.
     # You can check with:  ls /dev/cu.*
-    serial_dev = "/dev/cu.usbserial-0001"
+    serial_dev = "/dev/cu.usbserial-0001" # direct serial connection
+    ble_serial = "/dev/cu.ESP32-SPP"     # bluetooth connection
     baudrate = 115200
 
-    print(f"[Shell] Using SERIAL transport on {serial_dev} @ {baudrate} baud")
-    transport = SerialTransport(serial_dev, baudrate=baudrate)
+    serial_choice = ble_serial
+    print(f"[Shell] Using SERIAL transport on {serial_choice} @ {baudrate} baud")
+    transport = SerialTransport(serial_choice, baudrate=baudrate) # default as bluetooth for now 
 
     client = AsyncRobotClient(transport=transport)
 

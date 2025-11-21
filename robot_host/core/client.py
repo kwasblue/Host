@@ -133,11 +133,34 @@ class AsyncRobotClient(RobotCommandsMixin):
             return
 
         type_str = obj.get("type", "")
+        cmd_str  = obj.get("cmd", "")
 
+        # --- HELLO handshake ---
         if type_str == "HELLO":
             self.bus.publish("hello", obj)
-        else:
-            self.bus.publish("json", obj)
+            return
+
+        # --- Telemetry frames from MCU ---
+        if type_str == "TELEMETRY":
+            # generic telemetry event
+            self.bus.publish("telemetry", obj)
+
+            # Convenience: fan out ultrasonic if present
+            data = obj.get("data", {})
+            ultra = data.get("ultrasonic")
+            if ultra is not None:
+                self.bus.publish("telemetry.ultrasonic", ultra)
+
+            return
+
+        # --- Command ACKs / other cmd-based messages ---
+        if cmd_str:
+            # e.g. cmd="ULTRASONIC_READ_ACK" -> "cmd.ULTRASONIC_READ_ACK"
+            self.bus.publish(f"cmd.{cmd_str}", obj)
+            return
+
+        # Fallback: generic JSON
+        self.bus.publish("json", obj)
 
     # ---------- Outgoing commands ----------
 
