@@ -224,7 +224,7 @@ COMMANDS: dict[str, dict] = {
             "speed_steps_s": {
                 "type": "float",
                 "required": False,
-                "default": 1000.0,
+                "default": 1000.0,  # steps per second
             },
         },
     },
@@ -238,6 +238,20 @@ COMMANDS: dict[str, dict] = {
         },
     },
 
+    "CMD_STEPPER_ENABLE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Enable or disable a stepper driver (via enable pin).",
+        "payload": {
+            "motor_id": {"type": "int", "required": True},
+            "enable": {
+                "type": "bool",
+                "required": False,
+                "default": True,  # True = enable, False = disable
+            },
+        },
+    },
+    
     "CMD_ULTRASONIC_ATTACH": {
         "kind": "cmd",
         "direction": "host->mcu",

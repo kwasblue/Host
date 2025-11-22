@@ -122,6 +122,13 @@ class RobotCommandsMixin:
         payload['motor_id'] = motor_id
         await self.send_json_cmd('CMD_STEPPER_STOP', payload)
 
+    async def cmd_stepper_enable(self, motor_id: int, enable: bool = True) -> None:
+        """Enable or disable a stepper driver (via enable pin). (CMD_STEPPER_ENABLE)"""
+        payload: dict[str, Any] = {}
+        payload['motor_id'] = motor_id
+        payload['enable'] = enable
+        await self.send_json_cmd('CMD_STEPPER_ENABLE', payload)
+
     async def cmd_ultrasonic_attach(self, sensor_id: int = 0) -> None:
         """Attach/configure an ultrasonic sensor for the given logical sensor_id. (CMD_ULTRASONIC_ATTACH)"""
         payload: dict[str, Any] = {}

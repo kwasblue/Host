@@ -242,6 +242,22 @@
         }
       }
     },
+    "CMD_STEPPER_ENABLE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Enable or disable a stepper driver (via enable pin).",
+      "payload": {
+        "motor_id": {
+          "type": "int",
+          "required": true
+        },
+        "enable": {
+          "type": "bool",
+          "required": false,
+          "default": true
+        }
+      }
+    },
     "CMD_ULTRASONIC_ATTACH": {
       "kind": "cmd",
       "direction": "host->mcu",
