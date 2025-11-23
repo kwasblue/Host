@@ -312,8 +312,58 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
-}
+        # ----------------------------------------------------------------------
+    # Encoders
+    # ----------------------------------------------------------------------
+    "CMD_ENCODER_ATTACH": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Attach/configure a quadrature encoder with runtime pins.",
+        "payload": {
+            "encoder_id": {
+                "type": "int",
+                "required": True,
+                "default": 0,
+            },
+            "pin_a": {
+                "type": "int",
+                "required": True,
+                "default": 32,
+            },
+            "pin_b": {
+                "type": "int",
+                "required": True,
+                "default": 33,
+            },
+        },
+    },
 
+    "CMD_ENCODER_READ": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Request current tick count for a given encoder.",
+        "payload": {
+            "encoder_id": {
+                "type": "int",
+                "required": True,
+                "default": 0,
+            },
+        },
+    },
+
+    "CMD_ENCODER_RESET": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Reset the tick count for a given encoder back to zero.",
+        "payload": {
+            "encoder_id": {
+                "type": "int",
+                "required": True,
+                "default": 0,
+            },
+        },
+    },
+}
 
 
 # === 3) GPIO logical channels ===

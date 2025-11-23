@@ -153,3 +153,23 @@ class RobotCommandsMixin:
         payload['level'] = level
         await self.send_json_cmd('CMD_SET_LOG_LEVEL', payload)
 
+    async def cmd_encoder_attach(self, encoder_id: int = 0, pin_a: int = 32, pin_b: int = 33) -> None:
+        """Attach/configure a quadrature encoder with runtime pins. (CMD_ENCODER_ATTACH)"""
+        payload: dict[str, Any] = {}
+        payload['encoder_id'] = encoder_id
+        payload['pin_a'] = pin_a
+        payload['pin_b'] = pin_b
+        await self.send_json_cmd('CMD_ENCODER_ATTACH', payload)
+
+    async def cmd_encoder_read(self, encoder_id: int = 0) -> None:
+        """Request current tick count for a given encoder. (CMD_ENCODER_READ)"""
+        payload: dict[str, Any] = {}
+        payload['encoder_id'] = encoder_id
+        await self.send_json_cmd('CMD_ENCODER_READ', payload)
+
+    async def cmd_encoder_reset(self, encoder_id: int = 0) -> None:
+        """Reset the tick count for a given encoder back to zero. (CMD_ENCODER_RESET)"""
+        payload: dict[str, Any] = {}
+        payload['encoder_id'] = encoder_id
+        await self.send_json_cmd('CMD_ENCODER_RESET', payload)
+

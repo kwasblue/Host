@@ -1,6 +1,8 @@
 # AUTO-GENERATED FILE — DO NOT EDIT BY HAND
 # Generated from pins.json by gen_pins.py
 
+ENC0_A = 32
+ENC0_B = 33
 I2C_SCL = 22
 I2C_SDA = 21
 LED_STATUS = 2
