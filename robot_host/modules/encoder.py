@@ -5,7 +5,7 @@ from typing import Any
 
 from robot_host.core.client import AsyncRobotClient
 from robot_host.core.event_bus import EventBus
-from config.pin_config import ENC0_A, ENC0_B
+from robot_host.config.pin_config import ENC0_A, ENC0_B
 
 
 @dataclass
