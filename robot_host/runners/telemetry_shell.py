@@ -54,10 +54,11 @@ async def main() -> None:
     # Pick whatever transport you want here
     # For serial: from robot_host.transports.serial_transport import SerialTransport
     #transport = SerialTransport(port="/dev/cu.usbserial-0001", baudrate=115200)
-    transport = BluetoothSerialTransport.auto(device_name="ESP32-SPP",baudrate=11520)
-    #transport = AsyncTcpTransport(host="10.0.0.61", port=3333)  # adjust to your robot
+    #transport = BluetoothSerialTransport.auto(device_name="ESP32-SPP",baudrate=11520)
+    transport = AsyncTcpTransport(host="10.0.0.61", port=3333)  # adjust to your robot
 
     client = AsyncRobotClient(transport, bus=bus)
+    
 
     # Structured telemetry module
     telemetry = TelemetryHostModule(bus)
@@ -69,8 +70,19 @@ async def main() -> None:
 
     # Keep the process alive while the transport runs (if needed)
     # If your transport has its own loop this might not be necessary.
+        # Toggle telemetry on/off every 30 seconds
+    on = False
+    INTERVAL_ON_MS = 100   # 10 Hz
+    INTERVAL_OFF_MS = 0    # disabled
+
     while True:
-        await asyncio.sleep(1.0)
+        on = not on
+        interval = INTERVAL_ON_MS if on else INTERVAL_OFF_MS
+        state = "ON" if on else "OFF"
+        print(f"\n[TELEM] Setting telemetry {state} (interval_ms={interval})")
+        await client.cmd_telem_set_interval(interval_ms=interval)
+        await asyncio.sleep(5.0)
+
 
 
 if __name__ == "__main__":
