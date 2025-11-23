@@ -10,7 +10,7 @@ async def main() -> None:
     # AP mode IP (RobotAP): 192.168.4.1
     # STA mode IP (home WiFi): whatever the ESP32 prints, e.g. 10.0.0.107
     host_ap  = "192.168.4.1"
-    host_sta = "10.0.0.107"
+    host_sta = "10.0.0.61"
     port = 3333
 
     transport = AsyncTcpTransport(host=host_sta, port = port)

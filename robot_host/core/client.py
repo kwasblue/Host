@@ -143,23 +143,25 @@ class AsyncRobotClient(RobotCommandsMixin):
             self.bus.publish("hello", obj)
             return
 
-        # --- Telemetry frames from MCU ---
         if type_str == "TELEMETRY":
-            # generic telemetry event
+            # NEW: raw telemetry feed for host modules
+            self.bus.publish("telemetry.raw", obj)
+
+            # existing generic event (keep for now so nothing breaks)
             self.bus.publish("telemetry", obj)
 
-            # Convenience: fan out ultrasonic if present
             data = obj.get("data", {})
+
+            # Convenience: existing ultrasonic fan-out (raw dict)
             ultra = data.get("ultrasonic")
             if ultra is not None:
                 self.bus.publish("telemetry.ultrasonic", ultra)
-        
-                    # IMU telemetry: feed into math helper
+
+            # IMU telemetry: feed into your math helper
             imu = data.get("imu")
             if imu is not None:
                 ts_ms = obj.get("ts_ms")
                 self._process_imu_telemetry(imu, ts_ms)
-
 
             return
 
