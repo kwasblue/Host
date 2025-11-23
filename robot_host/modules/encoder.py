@@ -5,13 +5,14 @@ from typing import Any
 
 from robot_host.core.client import AsyncRobotClient
 from robot_host.core.event_bus import EventBus
+from config.pin_config import ENC0_A, ENC0_B
 
 
 @dataclass
 class EncoderDefaults:
     encoder_id: int = 0
-    pin_a: int = 32
-    pin_b: int = 33
+    pin_a: int = ENC0_A
+    pin_b: int = ENC0_B
 
 
 class EncoderHostModule:
