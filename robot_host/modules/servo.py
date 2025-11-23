@@ -10,7 +10,7 @@ class ServoHostModule:
         self._bus = bus
         self._client = client
 
-    async def attach(self, servo_id: int = 0, min_us: int = 1000, max_us: int = 2000) -> None:
+    async def attach(self, servo_id: int = 0, min_us: int = 500, max_us: int = 2500) -> None:
         payload: dict[str, Any] = {
             "servo_id": int(servo_id),
             "min_us": int(min_us),
