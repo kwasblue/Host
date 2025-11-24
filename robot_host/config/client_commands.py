@@ -173,3 +173,16 @@ class RobotCommandsMixin:
         payload['encoder_id'] = encoder_id
         await self.send_json_cmd('CMD_ENCODER_RESET', payload)
 
+    async def cmd_dc_set_speed(self, motor_id: int, speed: float) -> None:
+        """Set DC motor speed and direction for a given motor ID. (CMD_DC_SET_SPEED)"""
+        payload: dict[str, Any] = {}
+        payload['motor_id'] = motor_id
+        payload['speed'] = speed
+        await self.send_json_cmd('CMD_DC_SET_SPEED', payload)
+
+    async def cmd_dc_stop(self, motor_id: int) -> None:
+        """Stop a DC motor (set speed to zero). (CMD_DC_STOP)"""
+        payload: dict[str, Any] = {}
+        payload['motor_id'] = motor_id
+        await self.send_json_cmd('CMD_DC_STOP', payload)
+

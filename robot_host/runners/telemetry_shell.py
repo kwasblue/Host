@@ -5,7 +5,7 @@ from robot_host.core.client import AsyncRobotClient
 from robot_host.transports.tcp_transport import AsyncTcpTransport
 from robot_host.transports.serial_transport import SerialTransport  # or serial_transport
 from robot_host.telemetry.host_module import TelemetryHostModule
-from robot_host.telemetry.models import ImuTelemetry, UltrasonicTelemetry, LidarTelemetry
+from robot_host.telemetry.models import ImuTelemetry, UltrasonicTelemetry, LidarTelemetry, StepperTelemetry
 from robot_host.transports.bluetooth_transport import BluetoothSerialTransport
 
 
@@ -41,11 +41,27 @@ def attach_telemetry_prints(bus: EventBus) -> None:
             f"[LIDAR] t={ts} online={lidar.online} ok={lidar.ok} "
             f"d={dist} signal={sig}"
         )
+    
+    def on_stepper(step: StepperTelemetry) -> None:
+        ts = f"{step.ts_ms}ms" if step.ts_ms is not None else "?"
+        mid = step.motor_id if step.motor_id is not None else "?"
+        enabled = step.enabled
+        moving = step.moving
+        steps = step.last_cmd_steps
+        speed = step.last_cmd_speed
+
+        print(
+            f"[STEPPER] t={ts} motor={mid} attached={step.attached} "
+            f"enabled={enabled} moving={moving} "
+            f"dir_fwd={step.dir_forward} "
+            f"last_cmd_steps={steps} last_cmd_speed={speed}"
+        )
             
 
     bus.subscribe("telemetry.imu", on_imu)
     bus.subscribe("telemetry.ultrasonic", on_ultra)
     bus.subscribe("telemetry.lidar", on_lidar)
+    bus.subscribe("telemetry.stepper0", on_stepper)
 
 
 async def main() -> None:
@@ -73,7 +89,7 @@ async def main() -> None:
         # Toggle telemetry on/off every 30 seconds
     on = False
     INTERVAL_ON_MS = 100   # 10 Hz
-    INTERVAL_OFF_MS = 0    # disabled
+    INTERVAL_OFF_MS = 1000    # disabled
 
     while True:
         on = not on

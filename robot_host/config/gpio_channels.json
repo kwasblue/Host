@@ -17,6 +17,36 @@
       "mode": "input",
       "name": "ULTRASONIC_ECHO",
       "pin_name": "ULTRA0_ECHO"
+    },
+    {
+      "channel": 3,
+      "mode": "output",
+      "name": "MOTOR_LEFT_IN1",
+      "pin_name": "MOTOR_LEFT_IN1"
+    },
+    {
+      "channel": 4,
+      "mode": "output",
+      "name": "MOTOR_LEFT_IN2",
+      "pin_name": "MOTOR_LEFT_IN2"
+    },
+    {
+      "channel": 5,
+      "mode": "output",
+      "name": "STEPPER0_EN",
+      "pin_name": "STEPPER0_EN"
+    },
+    {
+      "channel": 6,
+      "mode": "input",
+      "name": "ENC0_A",
+      "pin_name": "ENC0_A"
+    },
+    {
+      "channel": 7,
+      "mode": "input",
+      "name": "ENC0_B",
+      "pin_name": "ENC0_B"
     }
   ],
   "schema_version": 1

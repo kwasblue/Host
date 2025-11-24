@@ -11,5 +11,8 @@
   "I2C_SDA": 21,
   "I2C_SCL": 22,
   "ENC0_A" : 32,
-  "ENC0_B" : 33
+  "ENC0_B" : 33,
+  "STEPPER0_STEP": 19,
+  "STEPPER0_DIR": 23,
+  "STEPPER0_EN": 27
 }

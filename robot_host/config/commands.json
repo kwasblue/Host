@@ -358,6 +358,37 @@
           "default": 0
         }
       }
+    },
+    "CMD_DC_SET_SPEED": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set DC motor speed and direction for a given motor ID.",
+      "payload": {
+        "motor_id": {
+          "type": "int",
+          "required": true,
+          "description": "Logical DC motor ID (0..3)."
+        },
+        "speed": {
+          "type": "float",
+          "required": true,
+          "description": "Normalized speed in [-1.0, 1.0]; sign = direction.",
+          "min": -1.0,
+          "max": 1.0
+        }
+      }
+    },
+    "CMD_DC_STOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Stop a DC motor (set speed to zero).",
+      "payload": {
+        "motor_id": {
+          "type": "int",
+          "required": true,
+          "description": "Logical DC motor ID (0..3)."
+        }
+      }
     }
   },
   "schema_version": 1

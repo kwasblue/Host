@@ -312,7 +312,7 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
-        # ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     # Encoders
     # ----------------------------------------------------------------------
     "CMD_ENCODER_ATTACH": {
@@ -363,6 +363,42 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
+    # ----------------------------------------------------------------------
+    # DC Motor
+    # ----------------------------------------------------------------------
+    "CMD_DC_SET_SPEED": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set DC motor speed and direction for a given motor ID.",
+        "payload": {
+            "motor_id": {
+                "type": "int",
+                "required": True,
+                "description": "Logical DC motor ID (0..3).",
+            },
+            "speed": {
+                "type": "float",
+                "required": True,
+                "description": "Normalized speed in [-1.0, 1.0]; sign = direction.",
+                "min": -1.0,
+                "max": 1.0,
+            },
+        },
+    },
+
+    "CMD_DC_STOP": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Stop a DC motor (set speed to zero).",
+        "payload": {
+            "motor_id": {
+                "type": "int",
+                "required": True,
+                "description": "Logical DC motor ID (0..3).",
+            },
+        },
+    },
+
 }
 
 
@@ -377,7 +413,6 @@ GPIO_CHANNELS: list[dict] = [
         "pin_name": "LED_STATUS",
         "mode": "output",
     },
-
     {
         "name": "ULTRASONIC_TRIG",
         "channel": 1,
@@ -388,6 +423,42 @@ GPIO_CHANNELS: list[dict] = [
         "name": "ULTRASONIC_ECHO",
         "channel": 2,
         "pin_name": "ULTRA0_ECHO",
+        "mode": "input",
+    },
+
+    # --- DC motor direction pins (L298N Motor A) ---
+    {
+        "name": "MOTOR_LEFT_IN1",
+        "channel": 3,
+        "pin_name": "MOTOR_LEFT_IN1",
+        "mode": "output",
+    },
+    {
+        "name": "MOTOR_LEFT_IN2",
+        "channel": 4,
+        "pin_name": "MOTOR_LEFT_IN2",
+        "mode": "output",
+    },
+
+    # --- Stepper enable (so host *can* poke EN if desired) ---
+    {
+        "name": "STEPPER0_EN",
+        "channel": 5,
+        "pin_name": "STEPPER0_EN",
+        "mode": "output",
+    },
+
+    # --- Encoder pins exposed as GPIO inputs (for debug / GPIO_READ) ---
+    {
+        "name": "ENC0_A",
+        "channel": 6,
+        "pin_name": "ENC0_A",
+        "mode": "input",
+    },
+    {
+        "name": "ENC0_B",
+        "channel": 7,
+        "pin_name": "ENC0_B",
         "mode": "input",
     },
 ]

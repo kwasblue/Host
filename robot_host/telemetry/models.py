@@ -40,3 +40,20 @@ class TelemetryPacket:
     imu: Optional[ImuTelemetry] = None
     ultrasonic: Optional[UltrasonicTelemetry] = None
     lidar: Optional[LidarTelemetry] = None
+
+
+@dataclass
+class StepperTelemetry:
+    name: str = "stepper0"
+
+    ts_ms: Optional[int] = None
+
+    motor_id: Optional[int] = None
+    attached: Optional[bool] = None
+
+    enabled: Optional[bool] = None
+    moving: Optional[bool] = None
+    dir_forward: Optional[bool] = None
+
+    last_cmd_steps: Optional[int] = None
+    last_cmd_speed: Optional[float] = None

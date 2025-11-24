@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from .models import TelemetryPacket, ImuTelemetry, UltrasonicTelemetry, LidarTelemetry
+from .models import TelemetryPacket, ImuTelemetry, UltrasonicTelemetry, LidarTelemetry, StepperTelemetry
 
 
 def _float_or_none(v: Any) -> Optional[float]:
@@ -68,6 +68,19 @@ def parse_telemetry(msg: Dict[str, Any]) -> TelemetryPacket:
             ts_ms=ts_ms,
         )
 
+        # --- 🔹 NEW: Stepper0 ---
+        if "stepper0" in data:
+            s_raw = data["stepper0"] or {}
+            step = StepperTelemetry(
+                ts_ms=ts_ms,
+                motor_id=s_raw.get("motor_id"),
+                attached=s_raw.get("attached"),
+                enabled=s_raw.get("enabled"),
+                moving=s_raw.get("moving"),
+                dir_forward=s_raw.get("dir_forward"),
+                last_cmd_steps=s_raw.get("last_cmd_steps"),
+                last_cmd_speed=s_raw.get("last_cmd_speed"),
+            )
     return TelemetryPacket(
         ts_ms=ts_ms,
         raw=msg,
