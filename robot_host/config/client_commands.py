@@ -186,3 +186,26 @@ class RobotCommandsMixin:
         payload['motor_id'] = motor_id
         await self.send_json_cmd('CMD_DC_STOP', payload)
 
+    async def cmd_dc_vel_pid_enable(self, motor_id: int, enable: bool) -> None:
+        """Enable or disable closed-loop velocity PID control for a DC motor. (CMD_DC_VEL_PID_ENABLE)"""
+        payload: dict[str, Any] = {}
+        payload['motor_id'] = motor_id
+        payload['enable'] = enable
+        await self.send_json_cmd('CMD_DC_VEL_PID_ENABLE', payload)
+
+    async def cmd_dc_set_vel_target(self, motor_id: int, omega: float) -> None:
+        """Set desired angular velocity target for a DC motor's PID controller. (CMD_DC_SET_VEL_TARGET)"""
+        payload: dict[str, Any] = {}
+        payload['motor_id'] = motor_id
+        payload['omega'] = omega
+        await self.send_json_cmd('CMD_DC_SET_VEL_TARGET', payload)
+
+    async def cmd_dc_set_vel_gains(self, motor_id: int, kp: float, ki: float, kd: float) -> None:
+        """Configure PID gains for DC motor velocity control. (CMD_DC_SET_VEL_GAINS)"""
+        payload: dict[str, Any] = {}
+        payload['motor_id'] = motor_id
+        payload['kp'] = kp
+        payload['ki'] = ki
+        payload['kd'] = kd
+        await self.send_json_cmd('CMD_DC_SET_VEL_GAINS', payload)
+
