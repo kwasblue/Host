@@ -30,7 +30,7 @@ def frame_callback(display_frame: np.ndarray, ml_frame: np.ndarray, ts: float):
 
 
 def main():
-    cam_ip = "http://10.0.0.66"  # replace with your ESP32-CAM URL
+    cam_ip = "http://10.0.0.67"  # replace with your ESP32-CAM URL
 
     cam = CameraModule(
         base_url=cam_ip,

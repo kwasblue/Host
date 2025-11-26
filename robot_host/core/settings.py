@@ -1,17 +1,23 @@
+# robot_host/core/settings.py
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import yaml  
+import yaml
+
+from ..config.pin_config import ENC0_A, ENC0_B
+
 
 @dataclass
 class TransportSettings:
-    type: str = "tcp"         # "tcp" | "serial" | "ble"
+    type: str = "tcp"          # "tcp" | "serial" | "ble"
     host: Optional[str] = None
     port: Optional[int] = None
     serial_port: Optional[str] = None
-    baudrate: int = 115200
+    baudrate: int = 115200 
     ble_name: Optional[str] = None
+
 
 @dataclass
 class FeatureSettings:
@@ -20,12 +26,21 @@ class FeatureSettings:
     motion: bool = False
     modes: bool = True
     camera: bool = False
+    # easy to extend later:
+    # gpio: bool = False
+    # pwm: bool = False
+    # servo: bool = False
+    # stepper: bool = False
+    # dc_motor: bool = False
+
 
 @dataclass
 class EncoderDefaults:
     encoder_id: int = 0
-    pin_a: int = 32
-    pin_b: int = 33
+    # 👇 these were `pin_a: int(ENC0_A)` which *calls* int() instead of type-hinting
+    pin_a: int = ENC0_A
+    pin_b: int = ENC0_B
+
 
 @dataclass
 class HostSettings:
@@ -37,6 +52,7 @@ class HostSettings:
     def load(cls, profile: str = "default") -> "HostSettings":
         base = Path(__file__).resolve().parent.parent
         cfg_path = base / "config" / f"robot_profile_{profile}.yaml"
+
         data = yaml.safe_load(cfg_path.read_text())
 
         transport = TransportSettings(**data["transport"])
@@ -44,6 +60,7 @@ class HostSettings:
         encoder_defaults = EncoderDefaults(
             **data.get("encoder_defaults", {})
         )
+
         return cls(
             transport=transport,
             features=features,

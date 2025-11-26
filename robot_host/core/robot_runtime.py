@@ -1,9 +1,11 @@
+# robot_host/core/runtime.py
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from .event_bus import EventBus
-from .client import AsyncRobotClient
+from .client import AsyncRobotClient          # or .client_async if that's where it lives now
 from .settings import HostSettings
 
 from ..transports.tcp_transport import AsyncTcpTransport
@@ -19,9 +21,20 @@ from ..modules.logging_ctl import LoggingControlModule
 
 
 @dataclass
-class RobotRuntime:
+class BaseRobotRuntime:
+    """
+    Base runtime wiring for any robot using this MCU host.
+
+    This is the generic “platform”:
+      - One EventBus shared by everything.
+      - One AsyncRobotClient (transport + protocol).
+      - Common host modules (telemetry, motion, modes, etc.) as optional fields.
+
+    Robot-specific runtimes/classes should compose this, not replace it.
+    """
     bus: EventBus
     client: AsyncRobotClient
+
     telemetry: TelemetryHostModule | None = None
     encoder: EncoderHostModule | None = None
     motion: MotionHostModule | None = None
@@ -30,7 +43,17 @@ class RobotRuntime:
     logging_ctl: LoggingControlModule | None = None
 
 
-async def build_runtime(profile: str = "default") -> RobotRuntime:
+async def build_base_runtime(profile: str = "default") -> BaseRobotRuntime:
+    """
+    Build the base runtime for a given host profile.
+
+    This:
+      - Loads HostSettings for the profile.
+      - Creates EventBus.
+      - Selects and constructs the transport (TCP / serial / BLE).
+      - Builds and starts AsyncRobotClient on that transport.
+      - Wires in common host modules based on feature flags.
+    """
     settings = HostSettings.load(profile)
     bus = EventBus()
 
@@ -51,10 +74,14 @@ async def build_runtime(profile: str = "default") -> RobotRuntime:
     else:
         raise ValueError(f"Unknown transport type: {t_cfg.type}")
 
+    # --- Core client ---
     client = AsyncRobotClient(transport, bus=bus)
     await client.start()
 
+    # --- Host-side modules ---
+
     telemetry = TelemetryHostModule(bus) if settings.features.telemetry else None
+
     encoder = (
         EncoderHostModule(
             bus,
@@ -74,6 +101,7 @@ async def build_runtime(profile: str = "default") -> RobotRuntime:
         if settings.features.motion
         else None
     )
+
     modes = (
         ModeHostModule(bus, client)
         if settings.features.modes
@@ -83,7 +111,7 @@ async def build_runtime(profile: str = "default") -> RobotRuntime:
     telemetry_ctl = TelemetryControlModule(bus, client)
     logging_ctl = LoggingControlModule(bus, client)
 
-    return RobotRuntime(
+    return BaseRobotRuntime(
         bus=bus,
         client=client,
         telemetry=telemetry,
@@ -93,3 +121,9 @@ async def build_runtime(profile: str = "default") -> RobotRuntime:
         telemetry_ctl=telemetry_ctl,
         logging_ctl=logging_ctl,
     )
+
+
+# Optional: keep old name for backwards compatibility
+async def build_runtime(profile: str = "default") -> BaseRobotRuntime:
+    """Backward-compatible alias for build_base_runtime()."""
+    return await build_base_runtime(profile)
