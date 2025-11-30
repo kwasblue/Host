@@ -57,7 +57,7 @@ async def pick_reachable_host(
 
 async def main() -> None:
     # --- Network configuration ---
-    host_sta = "10.0.0.61"     # ESP32 in STA mode on home Wi-Fi
+    host_sta = "10.0.0.60"     # ESP32 in STA mode on home Wi-Fi
     host_ap  = "192.168.4.1"    # ESP32 AP IP (RobotAP)
     port = 3333
 

@@ -56,7 +56,7 @@ class PingLatencyMeasurer:
 
 async def main() -> None:
     # --- Transport setup (same idea as your shell) ---
-    host_sta = "10.0.0.61" 
+    host_sta = "10.0.0.60" 
     host_ap  = "192.168.4.1"  # STA IP or AP IP, whatever you're using
     port = 3333
 

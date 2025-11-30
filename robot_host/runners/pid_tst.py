@@ -8,7 +8,7 @@ from robot_host.transports.tcp_transport import AsyncTcpTransport
 
 
 async def main() -> None:
-    host_sta = "10.0.0.61"
+    host_sta = "10.0.0.60"
     host_ap  = "192.168.4.1"
     port = 3333
 

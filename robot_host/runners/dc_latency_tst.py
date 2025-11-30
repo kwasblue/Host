@@ -70,7 +70,7 @@ async def main() -> None:
 
     # --- Transport selection ---
     host_ap  = "192.168.4.1" # onboard wifi from esp32
-    host_sta = "10.0.0.61"
+    host_sta = "10.0.0.60"
     transport = AsyncTcpTransport(host=host_sta, port=3333)
     # Or use Serial if you prefer:
     # transport = SerialTransport(port="/dev/cu.usbserial-0001", baudrate=115200)
