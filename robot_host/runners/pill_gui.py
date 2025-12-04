@@ -62,7 +62,7 @@ SLOTS_PER_DISPENSE = 1
 
 APP_STYLESHEET = """
 QMainWindow {
-    background-color: #F5F5F7;
+    background-color: #F4F5F7;
 }
 
 /* Tabs */
@@ -72,81 +72,100 @@ QTabWidget::pane {
 QTabBar::tab {
     background: #E0E0E6;
     border-radius: 16px;
-    padding: 8px 16px;
+    padding: 8px 18px;
     margin-right: 4px;
     font-weight: 500;
-    color: #444;
+    color: #4B5563;
 }
 QTabBar::tab:selected {
-    background: #4CAF50;
+    background: #22C55E;
     color: white;
 }
 
-/* Card-like groups */
+/* Header card */
+QGroupBox#HeaderBox {
+    background-color: #FFFFFF;
+    border-radius: 20px;
+    border: 1px solid #E5E7EB;
+    margin-top: 4px;
+}
+QGroupBox#HeaderBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0;
+}
+
+/* Generic card-like groups */
 QGroupBox {
     background-color: #FFFFFF;
     border-radius: 16px;
     margin-top: 16px;
-    border: 1px solid #DDDDDD;
+    border: 1px solid #E5E7EB;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
     left: 12px;
     padding: 4px 8px;
     background-color: transparent;
-    color: #333333;
+    color: #111827;
     font-weight: 600;
 }
 
 /* Labels & text */
 QLabel {
-    color: #333333;
+    color: #111827;
+}
+
+/* Header status label */
+QLabel#HeaderStatusLabel {
+    font-weight: 600;
 }
 
 /* Buttons */
 QPushButton {
-    border-radius: 18px;
-    padding: 8px 16px;
-    font-weight: 500;
+    border-radius: 20px;
+    padding: 10px 18px;
+    font-weight: 600;
     border: none;
-    background-color: #4CAF50;
+    background-color: #22C55E;
     color: white;
 }
 QPushButton:hover {
-    background-color: #43A047;
+    background-color: #16A34A;
 }
 QPushButton:disabled {
-    background-color: #BDBDBD;
+    background-color: #D1D5DB;
 }
 
 /* Secondary buttons */
 QPushButton#secondaryButton {
-    background-color: #E0E0E6;
-    color: #333333;
+    background-color: #E5E7EB;
+    color: #111827;
 }
 QPushButton#secondaryButton:hover {
-    background-color: #D0D0D8;
+    background-color: #D1D5DB;
 }
 
 /* Spinboxes / time edit */
 QSpinBox, QDoubleSpinBox, QTimeEdit {
     border-radius: 10px;
     padding: 4px 6px;
-    border: 1px solid #CCCCCC;
-    background-color: #FAFAFA;
+    border: 1px solid #D1D5DB;
+    background-color: #F9FAFB;
     color: #000000;
 }
 
 /* Log box */
 QPlainTextEdit {
     border-radius: 12px;
-    border: 1px solid #DDDDDD;
+    border: 1px solid #E5E7EB;
     background-color: #FFFFFF;
+    color: #111827;
 }
 
 /* Status bar */
 QStatusBar {
-    background-color: #ECECF0;
+    background-color: #E5E7EB;
 }
 """
 
@@ -376,6 +395,7 @@ class PillDispenserWindow(QMainWindow):
 
         # ---- Header bar ----
         header = QGroupBox()
+        header.setObjectName("HeaderBox")
         header_layout = QHBoxLayout()
         header.setLayout(header_layout)
         header.setTitle("")
@@ -385,7 +405,7 @@ class PillDispenserWindow(QMainWindow):
         title_label.setFont(title_font)
 
         self.header_status_label = QLabel("Connecting to device…")
-        self.header_status_label.setStyleSheet("color: #555555;")
+        self.header_status_label.setObjectName("HeaderStatusLabel")
         self.header_status_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         header_layout.addWidget(title_label, stretch=1)
@@ -601,9 +621,32 @@ class PillDispenserWindow(QMainWindow):
             self.log_widget.clear()
 
     def _set_status(self, text: str):
+        # Detailed text for status bar + Device Status card
         self.status_bar.showMessage(text)
-        self.header_status_label.setText(text)
         self.status_detail_label.setText(text)
+
+        # Short, user-friendly header text + color
+        lower = text.lower()
+        if "error" in lower or "could not open" in lower:
+            header_text = "Not connected"
+            color = "#B91C1C"   # red
+        elif "connected" in lower:
+            header_text = "Connected"
+            color = "#15803D"   # green
+        elif "dispens" in lower:
+            header_text = "Dispensing…"
+            color = "#0F766E"   # teal
+        elif "scheduled" in lower:
+            header_text = "Dose scheduled"
+            color = "#4B5563"   # neutral
+        else:
+            header_text = text
+            color = "#4B5563"
+
+        self.header_status_label.setText(header_text)
+        self.header_status_label.setStyleSheet(
+            f"color: {color}; font-weight: 600;"
+        )
 
     def _on_connect_done(self, fut: "asyncio.Future"):
         try:
