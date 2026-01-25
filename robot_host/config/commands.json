@@ -1,9 +1,57 @@
 {
   "commands": {
+    "CMD_HEARTBEAT": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Host heartbeat to maintain connection. Resets host timeout watchdog.",
+      "payload": {}
+    },
+    "CMD_ARM": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Transition from IDLE to ARMED. Motors enabled but not accepting motion.",
+      "payload": {}
+    },
+    "CMD_DISARM": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Transition from ARMED to IDLE. Motors disabled.",
+      "payload": {}
+    },
+    "CMD_ACTIVATE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Transition from ARMED to ACTIVE. Motion commands now accepted.",
+      "payload": {}
+    },
+    "CMD_DEACTIVATE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Transition from ACTIVE to ARMED. Stops motion, still armed.",
+      "payload": {}
+    },
+    "CMD_ESTOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Emergency stop, immediately disable motion.",
+      "payload": {}
+    },
+    "CMD_CLEAR_ESTOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Clear ESTOP and return to IDLE mode.",
+      "payload": {}
+    },
+    "CMD_STOP": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Stop all motion (soft stop).",
+      "payload": {}
+    },
     "CMD_SET_MODE": {
       "kind": "cmd",
       "direction": "host->mcu",
-      "description": "Set the high-level robot mode (e.g., IDLE, ARMED, ACTIVE).",
+      "description": "Set the high-level robot mode. Prefer ARM/ACTIVATE/DISARM/DEACTIVATE.",
       "payload": {
         "mode": {
           "type": "string",
@@ -42,24 +90,6 @@
           ]
         }
       }
-    },
-    "CMD_STOP": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Stop all motion (soft stop).",
-      "payload": {}
-    },
-    "CMD_ESTOP": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Emergency stop, immediately disable motion.",
-      "payload": {}
-    },
-    "CMD_CLEAR_ESTOP": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Clear ESTOP and typically return to IDLE mode.",
-      "payload": {}
     },
     "CMD_LED_ON": {
       "kind": "cmd",

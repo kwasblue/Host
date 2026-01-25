@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import inspect
-from typing import Optional, Protocol, Callable
+from typing import Optional, Protocol, Callable, Dict, Any
 
 from .event_bus import EventBus
 from . import protocol
-from .messages import MsgType  # kept for external imports, even if unused
+from .coms.connection_monitor import ConnectionMonitor
+from .coms.reliable_commander import ReliableCommander
 from robot_host.config.client_commands import RobotCommandsMixin
 
 
@@ -31,35 +32,47 @@ MSG_CMD_JSON  = protocol.MSG_CMD_JSON
 
 class BaseAsyncRobotClient:
     """
-    Core async host-side client:
-
-      - Owns the transport and framing (protocol.encode / decode).
-      - Publishes decoded events onto an EventBus.
-      - Provides generic helpers: send_ping(), send_whoami(), send_json_cmd().
-      - Handles generic JSON/telemetry routing.
-
-    This class is intentionally *robot-agnostic* 
+    Core async host-side client with connection monitoring and reliable commands.
     """
 
-    def __init__(self, transport: HasSendBytes, bus: Optional[EventBus] = None) -> None:
+    def __init__(
+        self,
+        transport: HasSendBytes,
+        bus: Optional[EventBus] = None,
+        heartbeat_interval_s: float = 0.2,
+        connection_timeout_s: float = 1.0,
+        command_timeout_s: float = 0.25,
+        max_retries: int = 3,
+    ) -> None:
         self.transport = transport
         self.bus = bus or EventBus()
         self._running = False
-        self._seq = 0  # for JSON command sequencing
-
-        # Transport will call _on_frame(body) where:
-        #   body[0] = msg_type
-        #   body[1:] = payload bytes
+        self._seq = 0
+        self._heartbeat_task: Optional[object] = None
+        
+        # Connection monitor
+        self.connection = ConnectionMonitor(
+            timeout_s=connection_timeout_s,
+            on_disconnect=self._on_disconnect,
+            on_reconnect=self._on_reconnect,
+        )
+        
+        # Reliable commander
+        self.commander = ReliableCommander(
+            send_func=self._send_json_cmd_internal,
+            timeout_s=command_timeout_s,
+            max_retries=max_retries,
+        )
+        
+        self._heartbeat_interval_s = heartbeat_interval_s
+        
+        # Transport will call _on_frame(body)
         self.transport.set_frame_handler(self._on_frame)
 
     # ---------- Lifecycle ----------
 
     async def start(self) -> None:
-        """
-        Start the transport.
-
-        Compatible with both sync and async transport.start().
-        """
+        """Start the transport and background tasks."""
         if self.transport is None:
             return
 
@@ -72,14 +85,34 @@ class BaseAsyncRobotClient:
             await result
 
         self._running = True
+        
+        # Start background tasks
+        await self.connection.start_monitoring(interval_s=0.1)
+        await self.commander.start_update_loop(interval_s=0.05)
+        
+        # Start heartbeat
+        import asyncio
+        self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+        
         print("[RobotClient] Started")
 
     async def stop(self) -> None:
-        """
-        Stop the client and underlying transport.
-
-        Compatible with both sync and async transport.stop().
-        """
+        """Stop the client and underlying transport."""
+        self._running = False
+        
+        # Stop background tasks
+        await self.connection.stop_monitoring()
+        await self.commander.stop_update_loop()
+        
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            try:
+                await self._heartbeat_task
+            except:
+                pass
+        
+        self.commander.clear_pending()
+        
         if self.transport is None:
             return
 
@@ -90,18 +123,40 @@ class BaseAsyncRobotClient:
         result = stop_fn()
         if inspect.isawaitable(result):
             await result
+        
+        print("[RobotClient] Stopped")
+
+    # ---------- Connection callbacks ----------
+
+    def _on_disconnect(self) -> None:
+        print("[RobotClient] Connection lost!")
+        self.commander.clear_pending()
+        self.bus.publish("connection.lost", {})
+    
+    def _on_reconnect(self) -> None:
+        print("[RobotClient] Connection restored!")
+        self.bus.publish("connection.restored", {})
+
+    # ---------- Heartbeat ----------
+
+    async def _heartbeat_loop(self) -> None:
+        import asyncio
+        while self._running:
+            try:
+                await self.send_json_cmd("CMD_HEARTBEAT", {})
+            except Exception as e:
+                print(f"[RobotClient] Heartbeat error: {e}")
+            await asyncio.sleep(self._heartbeat_interval_s)
 
     # ---------- Incoming data path ----------
 
     def _on_frame(self, body: bytes) -> None:
-        """
-        Called by the transport whenever a complete framed message arrives.
-
-        body[0] = msg_type
-        body[1:] = payload bytes
-        """
+        """Called by the transport whenever a complete framed message arrives."""
         if not body:
             return
+
+        # Update connection monitor
+        self.connection.on_message_received()
 
         msg_type = body[0]
         payload = body[1:]
@@ -113,25 +168,19 @@ class BaseAsyncRobotClient:
         elif msg_type == MSG_CMD_JSON:
             self._handle_json_payload(payload)
         else:
-            # Unknown / raw frame
             self.bus.publish(
                 "raw_frame",
                 {"msg_type": msg_type, "payload": payload},
             )
 
     def _handle_json_payload(self, payload: bytes) -> None:
-        """
-        Handle a JSON-encoded payload from the robot.
-        """
+        """Handle a JSON-encoded payload from the robot."""
         try:
             text = payload.decode("utf-8")
             obj = json.loads(text)
         except Exception as e:
             print(f"[RobotClient] Failed to decode JSON payload: {e!r}")
-            self.bus.publish(
-                "json_error",
-                {"error": str(e), "raw": payload},
-            )
+            self.bus.publish("json_error", {"error": str(e), "raw": payload})
             return
 
         type_str = obj.get("type", "")
@@ -142,41 +191,60 @@ class BaseAsyncRobotClient:
             self.bus.publish("hello", obj)
             return
 
-        # --- Telemetry (generic) ---
+        # --- Telemetry ---
         if type_str == "TELEMETRY":
-            # Raw telemetry feed for host modules
             self.bus.publish("telemetry.raw", obj)
-
-            # Existing generic event (if anything expects this)
             self.bus.publish("telemetry", obj)
-
             return
 
-        # --- Command ACKs / other cmd-based messages ---
-        if cmd_str:
-            # e.g. cmd="ULTRASONIC_READ_ACK" -> "cmd.ULTRASONIC_READ_ACK"
+        # --- Command ACKs ---
+        if cmd_str and cmd_str.endswith("_ACK"):
+            seq = obj.get("seq", -1)
+            ok = obj.get("ok", False)
+            error = obj.get("error")
+            
+            # Route to reliable commander
+            self.commander.on_ack(seq, ok, error)
+            
+            # Also publish to bus for other listeners
             self.bus.publish(f"cmd.{cmd_str}", obj)
+            
+            # Publish state changes
+            if "state" in obj:
+                self.bus.publish("state.changed", {"state": obj["state"]})
             return
 
-        # Fallback: generic JSON
+        # Fallback
         self.bus.publish("json", obj)
 
     # ---------- Outgoing commands ----------
 
     def _next_seq(self) -> int:
-        self._seq += 1
+        self._seq = (self._seq + 1) & 0xFFFF
         return self._seq
 
     async def _send_frame(self, msg_type: int, payload: bytes = b"") -> None:
-        """
-        Helper: encode and send a framed message via the transport.
-        Uses async transport.send_bytes(...) so it works with TCP and Serial.
-        """
+        """Encode and send a framed message via the transport."""
         frame = protocol.encode(msg_type, payload)
         await self.transport.send_bytes(frame)
 
+    async def _send_json_cmd_internal(self, type_str: str, payload: Dict[str, Any]) -> int:
+        """Internal: send command and return seq. Used by ReliableCommander."""
+        seq = self._next_seq()
+        cmd_obj = {
+            "kind": "cmd",
+            "type": type_str,
+            "seq": seq,
+            **payload,
+        }
+        data = json.dumps(cmd_obj).encode("utf-8")
+        await self._send_frame(MSG_CMD_JSON, data)
+        return seq
+
+    # ---------- Public API ----------
+
     async def send_ping(self) -> None:
-        """Send a simple PING frame (no payload)."""
+        """Send a simple PING frame."""
         await self._send_frame(MSG_PING, b"")
 
     async def send_whoami(self) -> None:
@@ -185,18 +253,87 @@ class BaseAsyncRobotClient:
 
     async def send_json_cmd(self, type_str: str, payload: Optional[dict] = None) -> None:
         """
-        Generic helper to send a high-level JSON command to the robot.
-
-        RobotCommandsMixin relies on this method to implement cmd_* helpers.
+        Send a JSON command (fire and forget).
+        For reliable delivery with ack, use send_reliable().
         """
+        await self._send_json_cmd_internal(type_str, payload or {})
+
+    async def send_reliable(
+        self,
+        type_str: str,
+        payload: Optional[dict] = None,
+        wait_for_ack: bool = True,
+    ) -> tuple[bool, Optional[str]]:
+        """
+        Send a command with retry logic.
+        
+        Returns:
+            (success, error_msg)
+        """
+        return await self.commander.send(type_str, payload, wait_for_ack)
+    
+    async def _send_json_cmd_internal(
+        self,
+        type_str: str,
+        payload: Dict[str, Any],
+        seq: Optional[int] = None,
+    ) -> int:
+        """
+        Internal: send command JSON and return seq.
+
+        If seq is provided, it is used as-is (for retries).
+        Otherwise, a new sequence is allocated.
+        """
+        if seq is None:
+            seq = self._next_seq()
+
         cmd_obj = {
             "kind": "cmd",
             "type": type_str,
-            "seq": self._next_seq(),
-            "payload": payload or {},
+            "seq": seq,
+            **(payload or {}),
         }
-        data = json.dumps(cmd_obj).encode("utf-8")
+
+        data = json.dumps(cmd_obj, separators=(",", ":")).encode("utf-8")
         await self._send_frame(MSG_CMD_JSON, data)
+        return seq
+
+    # ---------- Convenience methods ----------
+
+    async def arm(self) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_ARM")
+    
+    async def disarm(self) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_DISARM")
+    
+    async def activate(self) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_ACTIVATE")
+    
+    async def deactivate(self) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_DEACTIVATE")
+    
+    async def estop(self) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_ESTOP")
+    
+    async def clear_estop(self) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_CLEAR_ESTOP")
+    
+    async def stop(self) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_STOP")
+    
+    async def set_vel(self, vx: float, omega: float) -> tuple[bool, Optional[str]]:
+        return await self.send_reliable("CMD_SET_VEL", {"vx": vx, "omega": omega})
+
+    @property
+    def is_connected(self) -> bool:
+        return self.connection.connected
+    
+    def get_stats(self) -> Dict[str, Any]:
+        return {
+            "connected": self.is_connected,
+            "time_since_message": self.connection.time_since_last_message,
+            **self.commander.stats(),
+        }
 
 
 class AsyncRobotClient(BaseAsyncRobotClient, RobotCommandsMixin):

@@ -1,0 +1,470 @@
+================================================================================
+📂 PROJECT STRUCTURE
+Generated: 2026-01-24 21:42:01
+Total Files: 68
+================================================================================
+
+📄 boot_strap_structure.py
+   ⚙️  def ensure_dir(self, path)
+   ⚙️  def ensure_init(self, path)
+   ⚙️  def write_if_missing(self, path, content)
+   ⚙️  def main()
+
+📄 file_directory_listing.py
+   ⚙️  def list_all_files(self, root_path)
+   ⚙️  def list_all_directories_excluding_venv(self, root_path)
+
+📄 reorg.py
+   ⚙️  def ensure_dir(self, path)
+   ⚙️  def move_if_exists(self, src, dst)
+   ⚙️  def touch_init(self, path)
+   ⚙️  def remove_pycache(self, root)
+   ⚙️  def main()
+
+📄 robot_host/config/client_commands.py
+   🧱 class RobotCommandsMixin
+      (no methods)
+
+📄 robot_host/core/camera_client.py
+   🧱 class Esp32CamClient
+      ├── def __init__(self, base_url, timeout)
+      ├── def _fetch_raw_bgr(self)
+      ├── def get_frame(self, resize_to, blur_ksize)
+      ├── def get_frame_for_ml(self, target_size, normalize, to_chw)
+      ├── def get_dual_frame(self, display_size, ml_size, blur_ksize, normalize, to_chw)
+      ├── def iter_frames(self, delay)
+      └── def test_preview(self, window_name, delay)
+
+📄 robot_host/core/client.py
+   🧱 class HasSendBytes
+      ├── def set_frame_handler(self, handler)
+      ├── def start(self)
+      └── def stop(self)
+   🧱 class BaseAsyncRobotClient
+      ├── def __init__(self, transport, bus)
+      ├── def _on_frame(self, body)
+      ├── def _handle_json_payload(self, payload)
+      └── def _next_seq(self)
+   🧱 class AsyncRobotClient
+      (no methods)
+
+📄 robot_host/core/event_bus.py
+   🧱 class EventBus
+      ├── def __init__(self)
+      ├── def subscribe(self, topic, handler)
+      └── def publish(self, topic, data)
+
+📄 robot_host/core/messages.py
+   🧱 class MsgType
+      (no methods)
+
+📄 robot_host/core/ml_preprocess.py
+   ⚙️  def preprocess_for_ml(self, frame_bgr, target_size, normalize, to_chw)
+
+📄 robot_host/core/protocol.py
+   ⚙️  def encode(self, msg_type, payload)
+   ⚙️  def extract_frames(self, buffer, on_frame)
+
+📄 robot_host/core/robot_runtime.py
+   🧱 class BaseRobotRuntime
+      (no methods)
+
+📄 robot_host/core/settings.py
+   🧱 class TransportSettings
+      (no methods)
+   🧱 class FeatureSettings
+      (no methods)
+   🧱 class EncoderDefaults
+      (no methods)
+   🧱 class HostSettings
+      └── def load(self, cls, profile)
+
+📄 robot_host/modules/camera_module.py
+   🧱 class CameraModule
+      ├── def __init__(self, base_url, name, display_size, ml_size, blur_ksize, fps, show_preview, frame_callback)
+      ├── def start(self)
+      ├── def stop(self)
+      ├── def run_foreground(self)
+      ├── def _window_name(self)
+      └── def _run_loop(self)
+
+📄 robot_host/modules/encoder.py
+   🧱 class EncoderDefaults
+      (no methods)
+   🧱 class EncoderHostModule
+      └── def __init__(self, bus, client, defaults)
+
+📄 robot_host/modules/gpio.py
+   🧱 class GpioHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/imu.py
+   🧱 class ImuState
+      (no methods)
+   🧱 class ImuHostModule
+      ├── def __init__(self, bus)
+      ├── def set_biases(self, accel_bias, gyro_bias)
+      └── def _on_imu_raw(self, msg)
+
+📄 robot_host/modules/inverse_kin_example.py
+   🧱 class JointConfig
+      (no methods)
+   🧱 class LinkConfig
+      (no methods)
+   🧱 class ArmSettings
+      (no methods)
+   🧱 class ArmKinematics
+      ├── def __init__(self, cfg)
+      ├── def _clamp(self, joint, angle_deg)
+      └── def ik_planar(self, x, y, elbow_up)
+   🧱 class ArmIKModule
+      ├── def __init__(self, bus, client, settings)
+      ├── def start(self)
+      ├── def stop(self)
+      ├── def on_home(self, event)
+      ├── def on_move_joints(self, event)
+      ├── def on_move_cartesian(self, event)
+      ├── def _home(self)
+      ├── def _move_joint_deg(self, joint, angle_deg)
+      ├── def _send_servo_move(self, channel, angle_deg)
+      └── def _send_stepper_move_abs(self, joint, angle_deg)
+
+📄 robot_host/modules/logging_ctl.py
+   🧱 class LoggingControlModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/modes.py
+   🧱 class ModeHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/motion.py
+   🧱 class MotionHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/object_detection.py
+   🧱 class Detection
+      (no methods)
+   🧱 class DetectionModule
+      ├── def __init__(self, model, decode_fn, ml_size, class_names, score_thresh, use_torch, device, show_window, window_name, publish_fn)
+      └── def handle_frame(self, display_frame, ml_frame, ts)
+
+📄 robot_host/modules/pill_test.py
+   🧱 class PillCarouselConfig
+      (no methods)
+   🧱 class PillCarousel
+      ├── def __init__(self, client, config)
+      └── def set_current_slot(self, slot_index)
+
+📄 robot_host/modules/pwm.py
+   🧱 class PwmHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/servo.py
+   🧱 class ServoHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/stepper.py
+   🧱 class StepperHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/telemetry_ctl.py
+   🧱 class TelemetryControlModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/modules/ultrasonic.py
+   🧱 class UltrasonicDefaults
+      (no methods)
+   🧱 class UltrasonicHostModule
+      ├── def __init__(self, bus, client, defaults, auto_subscribe)
+      └── def _on_telemetry_raw(self, msg)
+
+📄 robot_host/modules/yolo_decode.py
+   ⚙️  def decode_yolo_output(self, raw, display_shape, ml_size)
+
+📄 robot_host/modules/yolo_detect.py
+   🧱 class YoloWrapper
+      ├── def __init__(self, weights)
+      └── def __call__(self, x)
+
+📄 robot_host/runners/bluetooth_shell.py
+   ⚙️  def _print_event(self, tag)
+   ⚙️  def _handler(self, data)
+   ⚙️  def _print_ultra(self, ultra)
+   ⚙️  def _print_imu(self, imu)
+
+📄 robot_host/runners/dc_latency_tst.py
+   🧱 class DcAckWaiter
+      ├── def __init__(self, bus)
+      └── def _on_ack(self, msg)
+
+📄 robot_host/runners/interactive_shell.py
+   ⚙️  def _print_event(self, tag)
+   ⚙️  def _handler(self, data)
+   ⚙️  def _print_ultra(self, ultra)
+   ⚙️  def _print_imu(self, imu)
+
+📄 robot_host/runners/latency_tst.py
+   🧱 class PingLatencyMeasurer
+      ├── def __init__(self, bus, client)
+      └── def _on_pong(self, msg)
+
+📄 robot_host/runners/led_latency_tst.py
+   ⚙️  def on_led_ack(self, msg)
+
+📄 robot_host/runners/pid_sweep_tst.py
+   ⚙️  def make_ack_waiter(self, topic)
+   ⚙️  def _cb(self, msg)
+
+📄 robot_host/runners/pid_tst.py
+   ⚙️  def on_dc_ack(self, msg)
+
+📄 robot_host/runners/pill_carousel.py
+   🧱 class SerialTransport
+      ├── def __init__(self, port, baudrate)
+      ├── def _open(self)
+      ├── def _close(self)
+      ├── def _read_raw(self, n)
+      └── def _send_bytes(self, data)
+   ⚙️  def main()
+
+📄 robot_host/runners/pill_gui.py
+   🧱 class SerialTransport
+      ├── def __init__(self, port, baudrate)
+      ├── def _open(self)
+      ├── def _close(self)
+      ├── def _read_raw(self, n)
+      └── def _send_bytes(self, data)
+   🧱 class RobotController
+      ├── def __init__(self, log_fn)
+      └── def _log(self, msg)
+   🧱 class GuiSignals
+      └── def __init__(self, parent)
+   🧱 class PillDispenserWindow
+      ├── def __init__(self)
+      ├── def _build_tabs(self, log_container)
+      ├── def _log_from_controller(self, msg)
+      ├── def _append_log(self, msg)
+      ├── def _set_status(self, text)
+      ├── def _on_connect_done(self, fut)
+      ├── def _update_next_slot_label(self)
+      ├── def on_dispense_clicked(self)
+      ├── def on_manual_goto(self)
+      ├── def on_manual_next(self)
+      ├── def on_manual_prev(self)
+      ├── def on_manual_full_rev(self)
+      ├── def on_manual_recalibrate(self)
+      ├── def on_schedule_clicked(self)
+      └── def closeEvent(self, event)
+   ⚙️  def done_callback(self, f)
+   ⚙️  def done_callback(self, f)
+   ⚙️  def _fire()
+   ⚙️  def done_callback(self, f)
+   ⚙️  def main()
+
+📄 robot_host/runners/run_camera.py
+   🧱 class DummyModel
+      └── def __call__(self, x)
+   ⚙️  def frame_callback(self, display_frame, ml_frame, ts)
+   ⚙️  def main()
+
+📄 robot_host/runners/run_camera_boxes.py
+   🧱 class DummyModel
+      └── def __call__(self, x)
+   ⚙️  def simple_decode_fn(self, raw, display_shape, ml_size)
+   ⚙️  def main()
+
+📄 robot_host/runners/run_detection.py
+   ⚙️  def main()
+
+📄 robot_host/runners/serial_interactive_shell.py
+   ⚙️  def _print_event(self, tag)
+   ⚙️  def _handler(self, data)
+
+📄 robot_host/runners/stepper_tst.py
+   🧱 class SerialTransport
+      ├── def __init__(self, port, baudrate)
+      ├── def _open(self)
+      ├── def _close(self)
+      ├── def _read_raw(self, n)
+      └── def _send_bytes(self, data)
+   ⚙️  def main()
+
+📄 robot_host/runners/telemetry_shell.py
+   ⚙️  def attach_telemetry_prints(self, bus)
+   ⚙️  def _get(self, obj, attr, default)
+   ⚙️  def on_imu(self, imu)
+   ⚙️  def on_ultra(self, ultra)
+   ⚙️  def on_lidar(self, lidar)
+   ⚙️  def on_stepper(self, step)
+   ⚙️  def on_dc(self, dc)
+
+📄 robot_host/scratch/lunenburg_observer.py
+   ⚙️  def get_system_matrices()
+   ⚙️  def quantize(self, y, step)
+   ⚙️  def simulate_observer(self, mode, dt, t_final, quant_step, alpha_pos_filt, pulse_amp)
+   ⚙️  def plot_results(self, res, title_suffix)
+
+📄 robot_host/scratch/pid_tsts.py
+   ⚙️  def send_cmd(self, ser, cmd, delay)
+   ⚙️  def make_pid_label(self, cfg)
+   ⚙️  def fmt(self, x)
+   ⚙️  def reset_pid_to_zero(self, ser)
+   ⚙️  def collect_log_for_pid(self, ser, cfg, duration)
+
+📄 robot_host/scratch/plot_pid.py
+   ⚙️  def _parse_pid_from_filename(self, stem)
+   ⚙️  def decode(self, v)
+   ⚙️  def load_time_vel(self, path)
+   ⚙️  def get_pid_params(self, path)
+   ⚙️  def choose_files()
+   ⚙️  def plot_pid_logs(self, files)
+
+📄 robot_host/scratch/plot_tst.py
+   ⚙️  def collect_log()
+   ⚙️  def plot_log()
+
+📄 robot_host/scratch/plot_tst2.py
+   ⚙️  def send_cmd(self, ser, cmd, delay)
+   ⚙️  def collect_log_for_pwm(self, ser, pwm_value, duration)
+   ⚙️  def plot_log(self, log_path)
+
+📄 robot_host/scratch/plot_vels.py
+   ⚙️  def load_time_vel(self, path, normalize_time)
+   ⚙️  def plot_all_pwm_logs()
+
+📄 robot_host/scratch/sweep_tst.py
+   ⚙️  def parse_kv_line(self, line)
+   ⚙️  def send_and_read_line(self, ser, cmd, timeout)
+   ⚙️  def send_cmd(self, ser, cmd)
+   ⚙️  def set_mode(self, ser, mode)
+   ⚙️  def set_sweep_freq(self, ser, freq_hz)
+   ⚙️  def main()
+
+📄 robot_host/scratch/test.py
+   ⚙️  def on_pong(self, data)
+   ⚙️  def on_json(self, data)
+
+📄 robot_host/telemetry/file_logger.py
+   🧱 class TelemetryFileLogger
+      ├── def __init__(self, bus, log_dir)
+      ├── def start(self)
+      ├── def stop(self)
+      ├── def _on_imu(self, imu)
+      └── def _on_ultra(self, ultra)
+
+📄 robot_host/telemetry/host_module.py
+   🧱 class TelemetryHostModule
+      ├── def __init__(self, bus, source_topic)
+      ├── def latest(self)
+      └── def _on_raw(self, msg)
+
+📄 robot_host/telemetry/models.py
+   🧱 class ImuTelemetry
+      (no methods)
+   🧱 class UltrasonicTelemetry
+      (no methods)
+   🧱 class LidarTelemetry
+      (no methods)
+   🧱 class EncoderTelemetry
+      (no methods)
+   🧱 class StepperTelemetry
+      (no methods)
+   🧱 class DcMotorTelemetry
+      (no methods)
+   🧱 class TelemetryPacket
+      (no methods)
+
+📄 robot_host/telemetry/parser.py
+   ⚙️  def _float_or_none(self, v)
+   ⚙️  def _int_or_none(self, v)
+   ⚙️  def parse_telemetry(self, msg)
+
+📄 robot_host/tools/build_world.py
+   ⚙️  def main()
+
+📄 robot_host/tools/gen_commands.py
+   ⚙️  def validate_commands(self, cmds)
+   ⚙️  def generate_json(self, commands)
+   ⚙️  def generate_cpp_header(self, commands)
+   ⚙️  def generate_py_module(self, commands)
+   ⚙️  def python_type_for(self, field)
+   ⚙️  def write_python_client_mixin(self, commands)
+   ⚙️  def main()
+
+📄 robot_host/tools/generate_pins.py
+   ⚙️  def generate_cpp(self, pins)
+   ⚙️  def generate_py(self, pins)
+   ⚙️  def main()
+
+📄 robot_host/tools/gpio_mapping_gen.py
+   ⚙️  def generate_json(self, channels)
+   ⚙️  def generate_cpp_header(self, channels)
+   ⚙️  def generate_py_module(self, channels)
+   ⚙️  def main()
+
+📄 robot_host/tools/imu_calibrator.py
+   🧱 class ImuCalibrator
+      ├── def __init__(self, client, samples_needed)
+      └── def _on_imu(self, imu)
+
+📄 robot_host/tools/platform_schema.py
+   ⚙️  def _load_pins(self, path)
+   ⚙️  def validate_schema()
+
+📄 robot_host/transports/base_transport.py
+   🧱 class BaseTransport
+      ├── def __init__(self)
+      ├── def set_frame_handler(self, handler)
+      ├── def _handle_body(self, body)
+      ├── def send_frame(self, msg_type, payload)
+      ├── def start(self)
+      ├── def stop(self)
+      └── def _send_bytes(self, data)
+
+📄 robot_host/transports/bluetooth_transport.py
+   🧱 class BluetoothSerialTransport
+      ├── def __init__(self, port, baudrate)
+      └── def auto(self, cls, device_name, baudrate)
+
+📄 robot_host/transports/serial_transport.py
+   🧱 class SerialTransport
+      ├── def __init__(self, port, baudrate)
+      ├── def _open(self)
+      ├── def _close(self)
+      ├── def _read_raw(self, n)
+      └── def _send_bytes(self, data)
+
+📄 robot_host/transports/stream_transport.py
+   🧱 class StreamTransport
+      ├── def __init__(self)
+      ├── def _open(self)
+      ├── def _close(self)
+      ├── def _read_raw(self, n)
+      ├── def _send_bytes(self, data)
+      ├── def start(self)
+      ├── def stop(self)
+      └── def _reader_loop(self)
+
+📄 robot_host/transports/tcp_transport.py
+   🧱 class AsyncTcpTransport
+      ├── def __init__(self, host, port, reconnect_delay)
+      └── def set_frame_handler(self, handler)
+
+📄 structure.py
+   ⚙️  def load_gitignore(self, project_root)
+   ⚙️  def attach_parents(self, tree)
+   ⚙️  def extract_defs_from_file(self, filepath)
+   ⚙️  def should_ignore_path(self, rel_path)
+   ⚙️  def scan_directory(self, base_path, respect_gitignore)
+   ⚙️  def format_args(self, args)
+   ⚙️  def print_structure(self, structure, output_file, show_line_numbers)
+   ⚙️  def generate_tree_view(self, structure)
+   ⚙️  def main()
+
+================================================================================
+📊 STATISTICS
+================================================================================
+Total Classes:    62
+Total Functions:  107
+Total Methods:    130
+================================================================================

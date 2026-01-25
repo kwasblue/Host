@@ -10,8 +10,48 @@ class RobotCommandsMixin:
     Requires that the inheriting client defines:
         async def send_json_cmd(self, type_str: str, payload: dict | None = None) -> None
     """
+    async def cmd_heartbeat(self) -> None:
+        """Host heartbeat to maintain connection. Resets host timeout watchdog. (CMD_HEARTBEAT)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_HEARTBEAT', payload)
+
+    async def cmd_arm(self) -> None:
+        """Transition from IDLE to ARMED. Motors enabled but not accepting motion. (CMD_ARM)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_ARM', payload)
+
+    async def cmd_disarm(self) -> None:
+        """Transition from ARMED to IDLE. Motors disabled. (CMD_DISARM)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_DISARM', payload)
+
+    async def cmd_activate(self) -> None:
+        """Transition from ARMED to ACTIVE. Motion commands now accepted. (CMD_ACTIVATE)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_ACTIVATE', payload)
+
+    async def cmd_deactivate(self) -> None:
+        """Transition from ACTIVE to ARMED. Stops motion, still armed. (CMD_DEACTIVATE)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_DEACTIVATE', payload)
+
+    async def cmd_estop(self) -> None:
+        """Emergency stop, immediately disable motion. (CMD_ESTOP)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_ESTOP', payload)
+
+    async def cmd_clear_estop(self) -> None:
+        """Clear ESTOP and return to IDLE mode. (CMD_CLEAR_ESTOP)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_CLEAR_ESTOP', payload)
+
+    async def cmd_stop(self) -> None:
+        """Stop all motion (soft stop). (CMD_STOP)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_STOP', payload)
+
     async def cmd_set_mode(self, mode: str) -> None:
-        """Set the high-level robot mode (e.g., IDLE, ARMED, ACTIVE). (CMD_SET_MODE)"""
+        """Set the high-level robot mode. Prefer ARM/ACTIVATE/DISARM/DEACTIVATE. (CMD_SET_MODE)"""
         payload: dict[str, Any] = {}
         payload['mode'] = mode
         await self.send_json_cmd('CMD_SET_MODE', payload)
@@ -23,21 +63,6 @@ class RobotCommandsMixin:
         payload['omega'] = omega
         payload['frame'] = frame
         await self.send_json_cmd('CMD_SET_VEL', payload)
-
-    async def cmd_stop(self) -> None:
-        """Stop all motion (soft stop). (CMD_STOP)"""
-        payload: dict[str, Any] = {}
-        await self.send_json_cmd('CMD_STOP', payload)
-
-    async def cmd_estop(self) -> None:
-        """Emergency stop, immediately disable motion. (CMD_ESTOP)"""
-        payload: dict[str, Any] = {}
-        await self.send_json_cmd('CMD_ESTOP', payload)
-
-    async def cmd_clear_estop(self) -> None:
-        """Clear ESTOP and typically return to IDLE mode. (CMD_CLEAR_ESTOP)"""
-        payload: dict[str, Any] = {}
-        await self.send_json_cmd('CMD_CLEAR_ESTOP', payload)
 
     async def cmd_led_on(self) -> None:
         """Turn status LED on. (CMD_LED_ON)"""

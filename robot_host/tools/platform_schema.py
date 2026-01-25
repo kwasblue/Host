@@ -40,12 +40,71 @@ PINS: dict[str, int] = _load_pins(PINS_JSON)
 
 COMMANDS: dict[str, dict] = {
     # ----------------------------------------------------------------------
-    # Robot Core
+    # Safety / State Machine
+    # ----------------------------------------------------------------------
+    "CMD_HEARTBEAT": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Host heartbeat to maintain connection. Resets host timeout watchdog.",
+        "payload": {},
+    },
+
+    "CMD_ARM": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Transition from IDLE to ARMED. Motors enabled but not accepting motion.",
+        "payload": {},
+    },
+
+    "CMD_DISARM": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Transition from ARMED to IDLE. Motors disabled.",
+        "payload": {},
+    },
+
+    "CMD_ACTIVATE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Transition from ARMED to ACTIVE. Motion commands now accepted.",
+        "payload": {},
+    },
+
+    "CMD_DEACTIVATE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Transition from ACTIVE to ARMED. Stops motion, still armed.",
+        "payload": {},
+    },
+
+    "CMD_ESTOP": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Emergency stop, immediately disable motion.",
+        "payload": {},
+    },
+
+    "CMD_CLEAR_ESTOP": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Clear ESTOP and return to IDLE mode.",
+        "payload": {},
+    },
+
+    "CMD_STOP": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Stop all motion (soft stop).",
+        "payload": {},
+    },
+
+    # ----------------------------------------------------------------------
+    # Robot Core (Legacy - consider deprecating SET_MODE)
     # ----------------------------------------------------------------------
     "CMD_SET_MODE": {
         "kind": "cmd",
         "direction": "host->mcu",
-        "description": "Set the high-level robot mode (e.g., IDLE, ARMED, ACTIVE).",
+        "description": "Set the high-level robot mode. Prefer ARM/ACTIVATE/DISARM/DEACTIVATE.",
         "payload": {
             "mode": {
                 "type": "string",
@@ -69,27 +128,6 @@ COMMANDS: dict[str, dict] = {
                 "enum": ["robot", "world"],
             },
         },
-    },
-
-    "CMD_STOP": {
-        "kind": "cmd",
-        "direction": "host->mcu",
-        "description": "Stop all motion (soft stop).",
-        "payload": {},
-    },
-
-    "CMD_ESTOP": {
-        "kind": "cmd",
-        "direction": "host->mcu",
-        "description": "Emergency stop, immediately disable motion.",
-        "payload": {},
-    },
-
-    "CMD_CLEAR_ESTOP": {
-        "kind": "cmd",
-        "direction": "host->mcu",
-        "description": "Clear ESTOP and typically return to IDLE mode.",
-        "payload": {},
     },
 
     # ----------------------------------------------------------------------
@@ -194,7 +232,6 @@ COMMANDS: dict[str, dict] = {
         },
     },
 
-    # *** UPDATED: supports `duration_ms` for servo interpolation ***
     "CMD_SERVO_SET_ANGLE": {
         "kind": "cmd",
         "direction": "host->mcu",
@@ -224,7 +261,7 @@ COMMANDS: dict[str, dict] = {
             "speed_steps_s": {
                 "type": "float",
                 "required": False,
-                "default": 1000.0,  # steps per second
+                "default": 1000.0,
             },
         },
     },
@@ -247,17 +284,19 @@ COMMANDS: dict[str, dict] = {
             "enable": {
                 "type": "bool",
                 "required": False,
-                "default": True,  # True = enable, False = disable
+                "default": True,
             },
         },
     },
-    
+
+    # ----------------------------------------------------------------------
+    # Ultrasonic
+    # ----------------------------------------------------------------------
     "CMD_ULTRASONIC_ATTACH": {
         "kind": "cmd",
         "direction": "host->mcu",
         "description": "Attach/configure an ultrasonic sensor for the given logical sensor_id.",
         "payload": {
-            # Which UltrasonicManager slot to use (0..MAX_SENSORS-1)
             "sensor_id": {
                 "type": "int",
                 "required": True,
@@ -271,7 +310,6 @@ COMMANDS: dict[str, dict] = {
         "direction": "host->mcu",
         "description": "Trigger a single ultrasonic distance measurement.",
         "payload": {
-            # Same logical sensor_id you attached earlier
             "sensor_id": {
                 "type": "int",
                 "required": True,
@@ -279,9 +317,9 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
-    
+
     # ----------------------------------------------------------------------
-    # Telemetry control
+    # Telemetry
     # ----------------------------------------------------------------------
     "CMD_TELEM_SET_INTERVAL": {
         "kind": "cmd",
@@ -291,13 +329,13 @@ COMMANDS: dict[str, dict] = {
             "interval_ms": {
                 "type": "int",
                 "required": True,
-                "default": 100,  # 10 Hz
+                "default": 100,
             },
         },
     },
 
     # ----------------------------------------------------------------------
-    # Logging (NEW)
+    # Logging
     # ----------------------------------------------------------------------
     "CMD_SET_LOG_LEVEL": {
         "kind": "cmd",
@@ -312,6 +350,7 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
+
     # ----------------------------------------------------------------------
     # Encoders
     # ----------------------------------------------------------------------
@@ -363,6 +402,7 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
+
     # ----------------------------------------------------------------------
     # DC Motor
     # ----------------------------------------------------------------------
@@ -398,7 +438,8 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
-        # ----------------------------------------------------------------------
+
+    # ----------------------------------------------------------------------
     # DC Motor – Velocity PID
     # ----------------------------------------------------------------------
     "CMD_DC_VEL_PID_ENABLE": {
@@ -464,7 +505,6 @@ COMMANDS: dict[str, dict] = {
             },
         },
     },
-
 }
 
 
