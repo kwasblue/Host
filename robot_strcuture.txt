@@ -1,7 +1,7 @@
 ================================================================================
 📂 PROJECT STRUCTURE
-Generated: 2026-01-24 21:42:01
-Total Files: 68
+Generated: 2026-01-25 14:51:46
+Total Files: 78
 ================================================================================
 
 📄 boot_strap_structure.py
@@ -41,12 +41,37 @@ Total Files: 68
       ├── def start(self)
       └── def stop(self)
    🧱 class BaseAsyncRobotClient
-      ├── def __init__(self, transport, bus)
+      ├── def __init__(self, transport, bus, heartbeat_interval_s, connection_timeout_s, command_timeout_s, max_retries)
+      ├── def _on_disconnect(self)
+      ├── def _on_reconnect(self)
       ├── def _on_frame(self, body)
       ├── def _handle_json_payload(self, payload)
-      └── def _next_seq(self)
+      ├── def _next_seq(self)
+      ├── def is_connected(self)
+      └── def get_stats(self)
    🧱 class AsyncRobotClient
       (no methods)
+
+📄 robot_host/core/coms/connection_monitor.py
+   🧱 class ConnectionMonitor
+      ├── def __init__(self, timeout_s, on_disconnect, on_reconnect)
+      ├── def on_message_received(self)
+      ├── def check(self)
+      ├── def connected(self)
+      ├── def time_since_last_message(self)
+      └── def reset(self)
+
+📄 robot_host/core/coms/reliable_commander.py
+   🧱 class CommandStatus
+      (no methods)
+   🧱 class PendingCommand
+      (no methods)
+   🧱 class ReliableCommander
+      ├── def __init__(self, send_func, timeout_s, max_retries)
+      ├── def on_ack(self, seq, ok, error)
+      ├── def pending_count(self)
+      ├── def clear_pending(self)
+      └── def stats(self)
 
 📄 robot_host/core/event_bus.py
    🧱 class EventBus
@@ -461,10 +486,59 @@ Total Files: 68
    ⚙️  def generate_tree_view(self, structure)
    ⚙️  def main()
 
+📄 tests/conftest.py
+   ⚙️  def bus()
+   ⚙️  def transport()
+
+📄 tests/helpers.py
+   ⚙️  def _decode_frames_from_bytes(self, blob)
+   🧱 class PublishedEvent
+      (no methods)
+   🧱 class CapturingBus
+      ├── def __init__(self)
+      ├── def subscribe(self, topic, handler)
+      ├── def publish(self, topic, data)
+      ├── def topics(self)
+      └── def last(self, topic)
+   🧱 class FakeAsyncTransport
+      ├── def __init__(self)
+      ├── def set_frame_handler(self, handler)
+      ├── def start(self)
+      └── def stop(self)
+
+📄 tests/test_base_transport.py
+   🧱 class DummyTransport
+      ├── def __init__(self)
+      ├── def start(self)
+      ├── def stop(self)
+      └── def _send_bytes(self, data)
+   ⚙️  def test_base_transport_send_frame_encodes()
+
+📄 tests/test_client_async.py
+   ⚙️  def _import_client()
+
+📄 tests/test_connection_monitor.py
+   ⚙️  def _import_connection_monitor()
+   ⚙️  def fake_monotonic()
+   ⚙️  def on_disc()
+   ⚙️  def on_rec()
+
+📄 tests/test_event_bus.py
+   ⚙️  def test_event_bus_subscribe_publish()
+   ⚙️  def handler(self, data)
+
+📄 tests/test_protocol.py
+   ⚙️  def test_encode_decode_roundtrip_single_frame()
+   ⚙️  def test_extract_multiple_frames_with_noise_and_partial()
+   ⚙️  def test_bad_checksum_resync()
+
+📄 tests/test_reliable_commander.py
+   ⚙️  def _import_reliable_commander()
+
 ================================================================================
 📊 STATISTICS
 ================================================================================
-Total Classes:    62
-Total Functions:  107
-Total Methods:    130
+Total Classes:    70
+Total Functions:  122
+Total Methods:    158
 ================================================================================

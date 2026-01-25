@@ -35,8 +35,14 @@ def _load_pins(path: Path) -> dict:
 
 PINS: dict[str, int] = _load_pins(PINS_JSON)
 
-
-# === 2) COMMANDS: your existing schema, unchanged in spirit ===
+# === 2) VERSION INFO ===
+VERSION: dict[str, any] = {
+    "firmware": "1.0.0",
+    "protocol": 1,
+    "board": "esp32",
+    "name": "robot",
+}
+# === 3) COMMANDS: your existing schema, unchanged in spirit ===
 
 COMMANDS: dict[str, dict] = {
     # ----------------------------------------------------------------------
@@ -508,7 +514,7 @@ COMMANDS: dict[str, dict] = {
 }
 
 
-# === 3) GPIO logical channels ===
+# === 4) GPIO logical channels ===
 #
 # pin_name must be a key in PINS.
 

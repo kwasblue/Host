@@ -1,8 +1,9 @@
-# robot_host/core/client_async.py
+# robot_host/core/client.py
 
 from __future__ import annotations
 
 import json
+import asyncio
 import inspect
 from typing import Optional, Protocol, Callable, Dict, Any
 
@@ -11,6 +12,7 @@ from . import protocol
 from .coms.connection_monitor import ConnectionMonitor
 from .coms.reliable_commander import ReliableCommander
 from robot_host.config.client_commands import RobotCommandsMixin
+from robot_host.config.version import PROTOCOL_VERSION, CLIENT_VERSION
 
 
 class HasSendBytes(Protocol):
@@ -23,16 +25,19 @@ class HasSendBytes(Protocol):
 
 
 # Re-export / alias protocol constants for convenience
-MSG_PING      = protocol.MSG_PING
-MSG_PONG      = protocol.MSG_PONG
-MSG_HEARTBEAT = protocol.MSG_HEARTBEAT
-MSG_WHOAMI    = protocol.MSG_WHOAMI
-MSG_CMD_JSON  = protocol.MSG_CMD_JSON
+MSG_PING             = protocol.MSG_PING
+MSG_PONG             = protocol.MSG_PONG
+MSG_HEARTBEAT        = protocol.MSG_HEARTBEAT
+MSG_WHOAMI           = protocol.MSG_WHOAMI
+MSG_CMD_JSON         = protocol.MSG_CMD_JSON
+MSG_VERSION_REQUEST  = protocol.MSG_VERSION_REQUEST
+MSG_VERSION_RESPONSE = protocol.MSG_VERSION_RESPONSE
 
 
 class BaseAsyncRobotClient:
     """
-    Core async host-side client with connection monitoring and reliable commands.
+    Core async host-side client with connection monitoring, reliable commands,
+    and version handshake.
     """
 
     def __init__(
@@ -43,12 +48,24 @@ class BaseAsyncRobotClient:
         connection_timeout_s: float = 1.0,
         command_timeout_s: float = 0.25,
         max_retries: int = 3,
+        require_version_match: bool = True,
+        handshake_timeout_s: float = 2.0,
     ) -> None:
         self.transport = transport
         self.bus = bus or EventBus()
         self._running = False
         self._seq = 0
-        self._heartbeat_task: Optional[object] = None
+        self._heartbeat_task: Optional[asyncio.Task] = None
+        
+        # Version handshake
+        self._require_version_match = require_version_match
+        self._handshake_timeout_s = handshake_timeout_s
+        self._version_verified = False
+        self._firmware_version: Optional[str] = None
+        self._protocol_version: Optional[int] = None
+        self._board: Optional[str] = None
+        self._robot_name: Optional[str] = None
+        self._handshake_future: Optional[asyncio.Future] = None
         
         # Connection monitor
         self.connection = ConnectionMonitor(
@@ -72,7 +89,7 @@ class BaseAsyncRobotClient:
     # ---------- Lifecycle ----------
 
     async def start(self) -> None:
-        """Start the transport and background tasks."""
+        """Start the transport, perform handshake, and start background tasks."""
         if self.transport is None:
             return
 
@@ -86,12 +103,20 @@ class BaseAsyncRobotClient:
 
         self._running = True
         
-        # Start background tasks
+        # Perform version handshake before anything else
+        if self._require_version_match:
+            try:
+                await self._perform_handshake()
+            except Exception as e:
+                self._running = False
+                await self._stop_transport()
+                raise
+        
+        # Start background tasks after successful handshake
         await self.connection.start_monitoring(interval_s=0.1)
         await self.commander.start_update_loop(interval_s=0.05)
         
         # Start heartbeat
-        import asyncio
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
         
         print("[RobotClient] Started")
@@ -108,11 +133,17 @@ class BaseAsyncRobotClient:
             self._heartbeat_task.cancel()
             try:
                 await self._heartbeat_task
-            except:
+            except asyncio.CancelledError:
                 pass
         
         self.commander.clear_pending()
         
+        await self._stop_transport()
+        
+        print("[RobotClient] Stopped")
+
+    async def _stop_transport(self) -> None:
+        """Helper to stop transport."""
         if self.transport is None:
             return
 
@@ -123,8 +154,68 @@ class BaseAsyncRobotClient:
         result = stop_fn()
         if inspect.isawaitable(result):
             await result
+
+    # ---------- Version Handshake ----------
+
+    async def _perform_handshake(self) -> None:
+        """Send VERSION_REQUEST and wait for VERSION_RESPONSE."""
+        print(f"[RobotClient] Requesting version (timeout={self._handshake_timeout_s}s)...")
         
-        print("[RobotClient] Stopped")
+        self._handshake_future = asyncio.get_event_loop().create_future()
+        
+        # Send version request
+        await self._send_frame(MSG_VERSION_REQUEST, b"")
+        
+        try:
+            result = await asyncio.wait_for(
+                self._handshake_future, 
+                timeout=self._handshake_timeout_s
+            )
+        except asyncio.TimeoutError:
+            raise RuntimeError(
+                f"Version handshake timed out after {self._handshake_timeout_s}s. "
+                "Is the firmware running?"
+            )
+        
+        # Parse response
+        self._firmware_version = result.get("firmware", "unknown")
+        self._protocol_version = result.get("protocol", 0)
+        self._board = result.get("board", "unknown")
+        self._robot_name = result.get("name", "unknown")
+        
+        print(f"[RobotClient] Firmware: {self._firmware_version}, "
+              f"Protocol: {self._protocol_version}, "
+              f"Board: {self._board}, "
+              f"Name: {self._robot_name}")
+        
+        # Check protocol version
+        if self._protocol_version != PROTOCOL_VERSION:
+            if self._protocol_version < PROTOCOL_VERSION:
+                update_target = "firmware"
+            else:
+                update_target = "host"
+            
+            raise RuntimeError(
+                f"Protocol version mismatch! "
+                f"Host expects {PROTOCOL_VERSION}, firmware has {self._protocol_version}. "
+                f"Please update {update_target}."
+            )
+        
+        self._version_verified = True
+        print("[RobotClient] Version handshake OK")
+
+    def _handle_version_response(self, payload: bytes) -> None:
+        """Handle VERSION_RESPONSE from firmware."""
+        try:
+            data = json.loads(payload.decode("utf-8"))
+        except Exception as e:
+            print(f"[RobotClient] Failed to parse version response: {e}")
+            data = {}
+        
+        self.bus.publish("version", data)
+        
+        if self._handshake_future and not self._handshake_future.done():
+            self._handshake_future.set_result(data)
 
     # ---------- Connection callbacks ----------
 
@@ -140,7 +231,6 @@ class BaseAsyncRobotClient:
     # ---------- Heartbeat ----------
 
     async def _heartbeat_loop(self) -> None:
-        import asyncio
         while self._running:
             try:
                 await self.send_json_cmd("CMD_HEARTBEAT", {})
@@ -165,6 +255,8 @@ class BaseAsyncRobotClient:
             self.bus.publish("pong", {})
         elif msg_type == MSG_HEARTBEAT:
             self.bus.publish("heartbeat", {})
+        elif msg_type == MSG_VERSION_RESPONSE:
+            self._handle_version_response(payload)
         elif msg_type == MSG_CMD_JSON:
             self._handle_json_payload(payload)
         else:
@@ -228,16 +320,29 @@ class BaseAsyncRobotClient:
         frame = protocol.encode(msg_type, payload)
         await self.transport.send_bytes(frame)
 
-    async def _send_json_cmd_internal(self, type_str: str, payload: Dict[str, Any]) -> int:
-        """Internal: send command and return seq. Used by ReliableCommander."""
-        seq = self._next_seq()
+    async def _send_json_cmd_internal(
+        self,
+        type_str: str,
+        payload: Dict[str, Any],
+        seq: Optional[int] = None,
+    ) -> int:
+        """
+        Internal: send command JSON and return seq.
+
+        If seq is provided, it is used as-is (for retries).
+        Otherwise, a new sequence is allocated.
+        """
+        if seq is None:
+            seq = self._next_seq()
+
         cmd_obj = {
             "kind": "cmd",
             "type": type_str,
             "seq": seq,
-            **payload,
+            **(payload or {}),
         }
-        data = json.dumps(cmd_obj).encode("utf-8")
+
+        data = json.dumps(cmd_obj, separators=(",", ":")).encode("utf-8")
         await self._send_frame(MSG_CMD_JSON, data)
         return seq
 
@@ -271,32 +376,6 @@ class BaseAsyncRobotClient:
             (success, error_msg)
         """
         return await self.commander.send(type_str, payload, wait_for_ack)
-    
-    async def _send_json_cmd_internal(
-        self,
-        type_str: str,
-        payload: Dict[str, Any],
-        seq: Optional[int] = None,
-    ) -> int:
-        """
-        Internal: send command JSON and return seq.
-
-        If seq is provided, it is used as-is (for retries).
-        Otherwise, a new sequence is allocated.
-        """
-        if seq is None:
-            seq = self._next_seq()
-
-        cmd_obj = {
-            "kind": "cmd",
-            "type": type_str,
-            "seq": seq,
-            **(payload or {}),
-        }
-
-        data = json.dumps(cmd_obj, separators=(",", ":")).encode("utf-8")
-        await self._send_frame(MSG_CMD_JSON, data)
-        return seq
 
     # ---------- Convenience methods ----------
 
@@ -324,13 +403,38 @@ class BaseAsyncRobotClient:
     async def set_vel(self, vx: float, omega: float) -> tuple[bool, Optional[str]]:
         return await self.send_reliable("CMD_SET_VEL", {"vx": vx, "omega": omega})
 
+    # ---------- Properties ----------
+
     @property
     def is_connected(self) -> bool:
         return self.connection.connected
     
+    @property
+    def version_verified(self) -> bool:
+        return self._version_verified
+    
+    @property
+    def firmware_version(self) -> Optional[str]:
+        return self._firmware_version
+    
+    @property
+    def protocol_version(self) -> Optional[int]:
+        return self._protocol_version
+    
+    @property
+    def board(self) -> Optional[str]:
+        return self._board
+    
+    @property
+    def robot_name(self) -> Optional[str]:
+        return self._robot_name
+    
     def get_stats(self) -> Dict[str, Any]:
         return {
             "connected": self.is_connected,
+            "version_verified": self._version_verified,
+            "firmware_version": self._firmware_version,
+            "protocol_version": self._protocol_version,
             "time_since_message": self.connection.time_since_last_message,
             **self.commander.stats(),
         }

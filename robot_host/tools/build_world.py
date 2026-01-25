@@ -39,6 +39,7 @@ if str(ROOT) not in sys.path:
 import generate_pins
 import gen_commands
 import gpio_mapping_gen
+import gen_version
 
 
 def main() -> None:
@@ -58,6 +59,11 @@ def main() -> None:
     print(">>> [gen_all] Running gen_gpio_channels.py ...")
     gpio_mapping_gen.main()
     print(">>> [gen_all] gen_gpio_channels.py done.\n")
+
+    # 4) Version Info (Version.h + version.py)
+    print(">>> [gen_all] Running gen_version.py ...")
+    gen_version.main()
+    print(">>> [gen_all] gen_version.py done.\n")   
 
     print("=== [gen_all] All generators completed successfully. ===")
 
