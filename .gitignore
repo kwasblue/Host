@@ -22,6 +22,7 @@ env/
 venv/
 .venv/
 pip-wheel-metadata/
+logs/
 
 # ---- Host auto-generated files ----
 robot_host/config/command_defs.py
