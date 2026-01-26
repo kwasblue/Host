@@ -30,6 +30,7 @@ robot_host/config/pin_config.py
 robot_host/config/gpio_channels.py
 robot_host/config/commands.json
 robot_host/config/pins.json
+robot_host/config/version.py
 robot_host/config/gpio_channels.json
 robot_host/config/client_commands.py
 
