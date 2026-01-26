@@ -1,6 +1,6 @@
 ================================================================================
 📂 PROJECT STRUCTURE
-Generated: 2026-01-25 14:51:46
+Generated: 2026-01-26 00:16:47
 Total Files: 78
 ================================================================================
 
@@ -21,10 +21,6 @@ Total Files: 78
    ⚙️  def remove_pycache(self, root)
    ⚙️  def main()
 
-📄 robot_host/config/client_commands.py
-   🧱 class RobotCommandsMixin
-      (no methods)
-
 📄 robot_host/core/camera_client.py
    🧱 class Esp32CamClient
       ├── def __init__(self, base_url, timeout)
@@ -41,13 +37,19 @@ Total Files: 78
       ├── def start(self)
       └── def stop(self)
    🧱 class BaseAsyncRobotClient
-      ├── def __init__(self, transport, bus, heartbeat_interval_s, connection_timeout_s, command_timeout_s, max_retries)
+      ├── def __init__(self, transport, bus, heartbeat_interval_s, connection_timeout_s, command_timeout_s, max_retries, require_version_match, handshake_timeout_s)
+      ├── def _handle_version_response(self, payload)
       ├── def _on_disconnect(self)
       ├── def _on_reconnect(self)
       ├── def _on_frame(self, body)
       ├── def _handle_json_payload(self, payload)
       ├── def _next_seq(self)
       ├── def is_connected(self)
+      ├── def version_verified(self)
+      ├── def firmware_version(self)
+      ├── def protocol_version(self)
+      ├── def board(self)
+      ├── def robot_name(self)
       └── def get_stats(self)
    🧱 class AsyncRobotClient
       (no methods)
@@ -323,52 +325,6 @@ Total Files: 78
    ⚙️  def on_stepper(self, step)
    ⚙️  def on_dc(self, dc)
 
-📄 robot_host/scratch/lunenburg_observer.py
-   ⚙️  def get_system_matrices()
-   ⚙️  def quantize(self, y, step)
-   ⚙️  def simulate_observer(self, mode, dt, t_final, quant_step, alpha_pos_filt, pulse_amp)
-   ⚙️  def plot_results(self, res, title_suffix)
-
-📄 robot_host/scratch/pid_tsts.py
-   ⚙️  def send_cmd(self, ser, cmd, delay)
-   ⚙️  def make_pid_label(self, cfg)
-   ⚙️  def fmt(self, x)
-   ⚙️  def reset_pid_to_zero(self, ser)
-   ⚙️  def collect_log_for_pid(self, ser, cfg, duration)
-
-📄 robot_host/scratch/plot_pid.py
-   ⚙️  def _parse_pid_from_filename(self, stem)
-   ⚙️  def decode(self, v)
-   ⚙️  def load_time_vel(self, path)
-   ⚙️  def get_pid_params(self, path)
-   ⚙️  def choose_files()
-   ⚙️  def plot_pid_logs(self, files)
-
-📄 robot_host/scratch/plot_tst.py
-   ⚙️  def collect_log()
-   ⚙️  def plot_log()
-
-📄 robot_host/scratch/plot_tst2.py
-   ⚙️  def send_cmd(self, ser, cmd, delay)
-   ⚙️  def collect_log_for_pwm(self, ser, pwm_value, duration)
-   ⚙️  def plot_log(self, log_path)
-
-📄 robot_host/scratch/plot_vels.py
-   ⚙️  def load_time_vel(self, path, normalize_time)
-   ⚙️  def plot_all_pwm_logs()
-
-📄 robot_host/scratch/sweep_tst.py
-   ⚙️  def parse_kv_line(self, line)
-   ⚙️  def send_and_read_line(self, ser, cmd, timeout)
-   ⚙️  def send_cmd(self, ser, cmd)
-   ⚙️  def set_mode(self, ser, mode)
-   ⚙️  def set_sweep_freq(self, ser, freq_hz)
-   ⚙️  def main()
-
-📄 robot_host/scratch/test.py
-   ⚙️  def on_pong(self, data)
-   ⚙️  def on_json(self, data)
-
 📄 robot_host/telemetry/file_logger.py
    🧱 class TelemetryFileLogger
       ├── def __init__(self, bus, log_dir)
@@ -414,6 +370,15 @@ Total Files: 78
    ⚙️  def generate_py_module(self, commands)
    ⚙️  def python_type_for(self, field)
    ⚙️  def write_python_client_mixin(self, commands)
+   ⚙️  def generate_cpp_version(self, version)
+   ⚙️  def generate_py_version(self, version)
+   ⚙️  def write_version_files(self, version, cpp_path, py_path)
+   ⚙️  def main()
+
+📄 robot_host/tools/gen_version.py
+   ⚙️  def generate_cpp_version(self, version)
+   ⚙️  def generate_py_version(self, version)
+   ⚙️  def write_version_files(self, version, cpp_path, py_path)
    ⚙️  def main()
 
 📄 robot_host/tools/generate_pins.py
@@ -466,9 +431,11 @@ Total Files: 78
       ├── def _close(self)
       ├── def _read_raw(self, n)
       ├── def _send_bytes(self, data)
+      ├── def is_open(self)
       ├── def start(self)
       ├── def stop(self)
       └── def _reader_loop(self)
+   ⚙️  def _locked_send()
 
 📄 robot_host/transports/tcp_transport.py
    🧱 class AsyncTcpTransport
@@ -486,9 +453,34 @@ Total Files: 78
    ⚙️  def generate_tree_view(self, structure)
    ⚙️  def main()
 
+📄 test.py
+   ⚙️  def on_frame(self, body)
+
 📄 tests/conftest.py
    ⚙️  def bus()
    ⚙️  def transport()
+   ⚙️  def pytest_addoption(self, parser)
+   ⚙️  def pytest_configure(self, config)
+   ⚙️  def attach_bus_dump(self, client, path, cycle)
+   ⚙️  def _ser(self, x)
+   ⚙️  def log(self, topic, obj)
+   ⚙️  def close()
+   ⚙️  def event_loop()
+
+📄 tests/fakes/fake_async_transport.py
+   🧱 class FakeAsyncTransport
+      ├── def __init__(self, auto_ack)
+      ├── def set_frame_handler(self, handler)
+      ├── def start(self)
+      ├── def stop(self)
+      └── def _inject_body(self, body)
+
+📄 tests/fakes/fake_transport.py
+   🧱 class FakeTransport
+      ├── def __init__(self)
+      ├── def set_frame_handler(self, handler)
+      ├── def start(self)
+      └── def stop(self)
 
 📄 tests/helpers.py
    ⚙️  def _decode_frames_from_bytes(self, blob)
@@ -500,11 +492,6 @@ Total Files: 78
       ├── def publish(self, topic, data)
       ├── def topics(self)
       └── def last(self, topic)
-   🧱 class FakeAsyncTransport
-      ├── def __init__(self)
-      ├── def set_frame_handler(self, handler)
-      ├── def start(self)
-      └── def stop(self)
 
 📄 tests/test_base_transport.py
    🧱 class DummyTransport
@@ -517,6 +504,21 @@ Total Files: 78
 📄 tests/test_client_async.py
    ⚙️  def _import_client()
 
+📄 tests/test_client_safety.py
+   🧱 class TestConnectionMonitor
+      ├── def test_initial_state_is_disconnected(self)
+      ├── def test_message_received_sets_connected(self)
+      ├── def test_timeout_triggers_disconnect(self)
+      ├── def test_message_prevents_timeout(self)
+      ├── def test_reconnect_callback_fires(self)
+      └── def test_reset_clears_state(self)
+   🧱 class TestReliableCommander
+      ├── def mock_send(self)
+      └── def test_stats_structure(self, mock_send)
+   🧱 class TestDisconnectClearsPending
+      (no methods)
+   ⚙️  def on_disconnect()
+
 📄 tests/test_connection_monitor.py
    ⚙️  def _import_connection_monitor()
    ⚙️  def fake_monotonic()
@@ -526,6 +528,34 @@ Total Files: 78
 📄 tests/test_event_bus.py
    ⚙️  def test_event_bus_subscribe_publish()
    ⚙️  def handler(self, data)
+
+📄 tests/test_hil_churn.py
+   ⚙️  def _get_mcu_port(self, request)
+   ⚙️  def _get_churn_cycles(self, request)
+   ⚙️  def _on_state(self, evt)
+
+📄 tests/test_hil_mini_soak.py
+   ⚙️  def pytest_addoption(self, parser)
+   ⚙️  def _get_mcu_port(self, request)
+   ⚙️  def _get_float_opt(self, request, cli_name, env_name, default)
+   ⚙️  def _get_log_dir(self, request)
+   ⚙️  def _want_event_dump(self, request)
+   ⚙️  def _ensure_dir(self, p)
+   ⚙️  def _now_ts()
+   ⚙️  def _safe_json(self, obj)
+   ⚙️  def _attach_bus_dump(self, client, filepath, tag)
+   ⚙️  def _write(self, topic, payload)
+   ⚙️  def close()
+   ⚙️  def _dump_snapshot(self, client, filepath, reason, recent, extra)
+   ⚙️  def _log_cmd(self, entry)
+   ⚙️  def _on_lost(self, _evt)
+   ⚙️  def _pending_size()
+
+📄 tests/test_hil_smoke.py
+   ⚙️  def _get_mcu_port(self, request)
+
+📄 tests/test_identity_handshake.py
+   ⚙️  def _import_client()
 
 📄 tests/test_protocol.py
    ⚙️  def test_encode_decode_roundtrip_single_frame()
@@ -538,7 +568,7 @@ Total Files: 78
 ================================================================================
 📊 STATISTICS
 ================================================================================
-Total Classes:    70
-Total Functions:  122
-Total Methods:    158
+Total Classes:    73
+Total Functions:  129
+Total Methods:    178
 ================================================================================

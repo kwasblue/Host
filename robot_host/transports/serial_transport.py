@@ -24,12 +24,39 @@ class SerialTransport(StreamTransport):
         self._ser: Optional[serial.Serial] = None
 
     def _open(self) -> None:
-        self._ser = serial.Serial(self.port, self.baudrate, timeout=0.05)
+        kwargs = dict(timeout=0.05, write_timeout=0.2)
+        try:
+            # POSIX-only; helps detect “port still open elsewhere”
+            kwargs["exclusive"] = True
+        except Exception:
+            pass
+
+        self._ser = serial.Serial(self.port, self.baudrate, **kwargs)
+        try:
+            self._ser.reset_input_buffer()
+            self._ser.reset_output_buffer()
+        except Exception:
+            pass
 
     def _close(self) -> None:
-        if self._ser and self._ser.is_open:
-            self._ser.close()
-        self._ser = None
+        if not self._ser:
+            return
+
+        try:
+            # Unblock any pending read/write in another thread
+            if hasattr(self._ser, "cancel_read"):
+                self._ser.cancel_read()
+            if hasattr(self._ser, "cancel_write"):
+                self._ser.cancel_write()
+        except Exception:
+            pass
+
+        try:
+            if self._ser.is_open:
+                self._ser.close()
+        finally:
+            self._ser = None
+
 
     def _read_raw(self, n: int) -> bytes:
         if not self._ser:

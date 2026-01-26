@@ -1,7 +1,7 @@
 # robot_host/core/client.py
 
 from __future__ import annotations
-
+import contextlib
 import json
 import asyncio
 import inspect
@@ -30,9 +30,8 @@ MSG_PONG             = protocol.MSG_PONG
 MSG_HEARTBEAT        = protocol.MSG_HEARTBEAT
 MSG_WHOAMI           = protocol.MSG_WHOAMI
 MSG_CMD_JSON         = protocol.MSG_CMD_JSON
-MSG_VERSION_REQUEST  = protocol.MSG_VERSION_REQUEST
-MSG_VERSION_RESPONSE = protocol.MSG_VERSION_RESPONSE
-
+MSG_VERSION_REQUEST  = getattr(protocol, "MSG_VERSION_REQUEST", None)
+MSG_VERSION_RESPONSE = getattr(protocol, "MSG_VERSION_RESPONSE", None)
 
 class BaseAsyncRobotClient:
     """
@@ -82,11 +81,28 @@ class BaseAsyncRobotClient:
         )
         
         self._heartbeat_interval_s = heartbeat_interval_s
+        self._cached_identity: Optional[dict] = None
         
         # Transport will call _on_frame(body)
         self.transport.set_frame_handler(self._on_frame)
 
     # ---------- Lifecycle ----------
+
+    async def ensure_safe_baseline(self) -> None:
+        """
+        Best-effort: put robot into a known-safe state regardless of current state.
+        Ignore errors because the robot may already be in that state.
+        """
+        for cmd, payload in [
+            ("CMD_CLEAR_ESTOP", {}),   # <- first
+            ("CMD_STOP", {}),
+            ("CMD_DEACTIVATE", {}),
+            ("CMD_DISARM", {}),
+        ]:
+            try:
+                await self.send_reliable(cmd, payload, wait_for_ack=True)
+            except Exception:
+                pass
 
     async def start(self) -> None:
         """Start the transport, perform handshake, and start background tasks."""
@@ -102,45 +118,59 @@ class BaseAsyncRobotClient:
             await result
 
         self._running = True
-        
+
         # Perform version handshake before anything else
         if self._require_version_match:
             try:
                 await self._perform_handshake()
-            except Exception as e:
+            except Exception:
                 self._running = False
                 await self._stop_transport()
                 raise
-        
-        # Start background tasks after successful handshake
-        await self.connection.start_monitoring(interval_s=0.1)
+
+        # Start commander FIRST so send_reliable works well
         await self.commander.start_update_loop(interval_s=0.05)
-        
-        # Start heartbeat
+
+        # NEW: normalize robot state before HIL tests call ARM/ACTIVATE
+        # await self.ensure_safe_baseline()
+
+        # Connection + heartbeat after baseline
+        await self.connection.start_monitoring(interval_s=0.1)
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
-        
+
         print("[RobotClient] Started")
 
     async def stop(self) -> None:
-        """Stop the client and underlying transport."""
+        """Stop the client and underlying transport (closes serial)."""
         self._running = False
-        
-        # Stop background tasks
-        await self.connection.stop_monitoring()
-        await self.commander.stop_update_loop()
-        
+
+        # 1) Cancel heartbeat
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
-        
-        self.commander.clear_pending()
-        
+            self._heartbeat_task = None
+
+        # 2) STOP background senders/monitors BEFORE sending any more commands
+        with contextlib.suppress(Exception):
+            await self.connection.stop_monitoring()
+        with contextlib.suppress(Exception):
+            await self.commander.stop_update_loop()
+
+        # 3) Clear anything queued/retrying
+        with contextlib.suppress(Exception):
+            self.commander.clear_pending()
+
+        # 4) Optional: one best-effort STOP only (don’t DISARM/DEACTIVATE here)
+        # This avoids “late disarm” affecting next test.
+        with contextlib.suppress(Exception):
+            await self.send("CMD_STOP", {})  # or whatever your non-reliable send is
+
+        # 5) Close transport last
         await self._stop_transport()
-        
+
         print("[RobotClient] Stopped")
+
 
     async def _stop_transport(self) -> None:
         """Helper to stop transport."""
@@ -157,52 +187,67 @@ class BaseAsyncRobotClient:
 
     # ---------- Version Handshake ----------
 
+
     async def _perform_handshake(self) -> None:
-        """Send VERSION_REQUEST and wait for VERSION_RESPONSE."""
-        print(f"[RobotClient] Requesting version (timeout={self._handshake_timeout_s}s)...")
-        
-        self._handshake_future = asyncio.get_event_loop().create_future()
-        
-        # Send version request
-        await self._send_frame(MSG_VERSION_REQUEST, b"")
-        
+        loop = asyncio.get_running_loop()
+        print(f"[RobotClient] Requesting identity/version (timeout={self._handshake_timeout_s}s)...")
+
+        self._handshake_future = loop.create_future()
+        # If identity arrived before handshake started, complete immediately
+        if self._cached_identity is not None:
+            if not self._handshake_future.done():
+                self._handshake_future.set_result(self._cached_identity)
+            self._cached_identity = None
+
+        req_type = MSG_VERSION_REQUEST if MSG_VERSION_REQUEST is not None else MSG_WHOAMI
+
+        # Make resend cadence scale down for short unit-test timeouts
+        resend_every = max(0.05, min(0.5, self._handshake_timeout_s / 4))
+
+        async def _resender() -> None:
+            while self._running and self._handshake_future and not self._handshake_future.done():
+                try:
+                    await self._send_frame(req_type, b"")
+                except Exception:
+                    pass
+                await asyncio.sleep(resend_every)
+
+        resend_task = asyncio.create_task(_resender())
+
         try:
             result = await asyncio.wait_for(
-                self._handshake_future, 
-                timeout=self._handshake_timeout_s
+                asyncio.shield(self._handshake_future),
+                timeout=self._handshake_timeout_s,
             )
         except asyncio.TimeoutError:
             raise RuntimeError(
-                f"Version handshake timed out after {self._handshake_timeout_s}s. "
-                "Is the firmware running?"
+                f"Handshake timed out after {self._handshake_timeout_s}s. Is the firmware running?"
             )
-        
-        # Parse response
+        finally:
+            resend_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await resend_task
+
+        # Parse result
         self._firmware_version = result.get("firmware", "unknown")
         self._protocol_version = result.get("protocol", 0)
         self._board = result.get("board", "unknown")
         self._robot_name = result.get("name", "unknown")
-        
+
         print(f"[RobotClient] Firmware: {self._firmware_version}, "
-              f"Protocol: {self._protocol_version}, "
-              f"Board: {self._board}, "
-              f"Name: {self._robot_name}")
-        
-        # Check protocol version
+            f"Protocol: {self._protocol_version}, "
+            f"Board: {self._board}, "
+            f"Name: {self._robot_name}")
+
         if self._protocol_version != PROTOCOL_VERSION:
-            if self._protocol_version < PROTOCOL_VERSION:
-                update_target = "firmware"
-            else:
-                update_target = "host"
-            
+            update_target = "firmware" if self._protocol_version < PROTOCOL_VERSION else "host"
             raise RuntimeError(
-                f"Protocol version mismatch! "
-                f"Host expects {PROTOCOL_VERSION}, firmware has {self._protocol_version}. "
+                f"Protocol version mismatch! Host expects {PROTOCOL_VERSION}, firmware has {self._protocol_version}. "
                 f"Please update {update_target}."
             )
-        
+
         self._version_verified = True
-        print("[RobotClient] Version handshake OK")
+        print("[RobotClient] Handshake OK")
 
     def _handle_version_response(self, payload: bytes) -> None:
         """Handle VERSION_RESPONSE from firmware."""
@@ -233,18 +278,29 @@ class BaseAsyncRobotClient:
     async def _heartbeat_loop(self) -> None:
         while self._running:
             try:
-                await self.send_json_cmd("CMD_HEARTBEAT", {})
-            except Exception as e:
-                print(f"[RobotClient] Heartbeat error: {e}")
-            await asyncio.sleep(self._heartbeat_interval_s)
+                # If transport exposes is_open(), avoid spamming errors during shutdown/churn
+                is_open = getattr(self.transport, "is_open", None)
+                if callable(is_open) and not is_open():
+                    await asyncio.sleep(self._heartbeat_interval_s)
+                    continue
 
+                # IMPORTANT: send a heartbeat FRAME, not a JSON cmd
+                await self._send_frame(MSG_HEARTBEAT, b"")
+            except Exception as e:
+                if self._running:
+                    print(f"[RobotClient] Heartbeat error: {e}")
+            await asyncio.sleep(self._heartbeat_interval_s)
     # ---------- Incoming data path ----------
 
     def _on_frame(self, body: bytes) -> None:
         """Called by the transport whenever a complete framed message arrives."""
         if not body:
             return
-
+            
+        if body[:1] in (b"{", b"["):
+            self.connection.on_message_received()
+            self._handle_json_payload(body)
+            return
         # Update connection monitor
         self.connection.on_message_received()
 
@@ -273,6 +329,18 @@ class BaseAsyncRobotClient:
         except Exception as e:
             print(f"[RobotClient] Failed to decode JSON payload: {e!r}")
             self.bus.publish("json_error", {"error": str(e), "raw": payload})
+            return
+
+        # ✅ ADD THIS BLOCK RIGHT HERE
+        kind = obj.get("kind", "")
+
+        # --- Identity handshake ---
+        if kind == "identity":
+            self.bus.publish("identity", obj)
+            if self._handshake_future and not self._handshake_future.done():
+                self._cached_identity = obj
+            else:
+                self._handshake_future.set_result(obj)
             return
 
         type_str = obj.get("type", "")
@@ -351,6 +419,9 @@ class BaseAsyncRobotClient:
     async def send_ping(self) -> None:
         """Send a simple PING frame."""
         await self._send_frame(MSG_PING, b"")
+    
+    async def send_heartbeat(self) -> None:
+        await self._send_frame(MSG_HEARTBEAT, b"")
 
     async def send_whoami(self) -> None:
         """Ask the MCU 'who are you?'."""
@@ -397,9 +468,9 @@ class BaseAsyncRobotClient:
     async def clear_estop(self) -> tuple[bool, Optional[str]]:
         return await self.send_reliable("CMD_CLEAR_ESTOP")
     
-    async def stop(self) -> tuple[bool, Optional[str]]:
+    async def cmd_stop(self) -> tuple[bool, Optional[str]]:
         return await self.send_reliable("CMD_STOP")
-    
+        
     async def set_vel(self, vx: float, omega: float) -> tuple[bool, Optional[str]]:
         return await self.send_reliable("CMD_SET_VEL", {"vx": vx, "omega": omega})
 

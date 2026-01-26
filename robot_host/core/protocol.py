@@ -2,14 +2,15 @@ from typing import Callable
 
 HEADER = 0xAA
 
-MSG_HEARTBEAT = 0x01
-MSG_PING      = 0x02
-MSG_PONG      = 0x03
-MSG_CMD_JSON  = 0x50
-MSG_WHOAMI    = 0x10
+MSG_HEARTBEAT        = 0x01
+MSG_PING             = 0x02
+MSG_PONG             = 0x03
+MSG_VERSION_REQUEST  = 0x04
+MSG_VERSION_RESPONSE = 0x05
+MSG_WHOAMI           = 0x10
+MSG_CMD_JSON         = 0x50
 
 _MAX_LEN = 65535  # 16-bit length
-
 
 def encode(msg_type: int, payload: bytes = b"") -> bytes:
     """

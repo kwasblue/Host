@@ -2,7 +2,8 @@ import asyncio
 import pytest
 
 from robot_host.core import protocol
-from helpers import FakeAsyncTransport, CapturingBus
+from fakes.fake_async_transport import FakeAsyncTransport
+from helpers import CapturingBus
 
 
 def _import_client():
@@ -29,6 +30,7 @@ async def test_client_receives_pong_and_heartbeat_events():
         connection_timeout_s=0.2,
         command_timeout_s=0.05,
         max_retries=0,
+        require_version_match=False,  # ✅ skip handshake for unit tests
     )
 
     await client.start()
@@ -55,6 +57,7 @@ async def test_client_routes_json_hello_and_telemetry():
         connection_timeout_s=0.2,
         command_timeout_s=0.05,
         max_retries=0,
+        require_version_match=False,  # ✅
     )
     await client.start()
 
@@ -85,6 +88,7 @@ async def test_client_reliable_command_completes_with_ack():
         connection_timeout_s=0.5,
         command_timeout_s=0.05,
         max_retries=1,
+        require_version_match=False,  # ✅
     )
     await client.start()
 
@@ -113,6 +117,7 @@ async def test_client_disconnect_clears_pending_and_publishes():
         connection_timeout_s=0.05,
         command_timeout_s=0.02,
         max_retries=0,
+        require_version_match=False,  # ✅
     )
     await client.start()
 
@@ -151,6 +156,7 @@ async def test_client_raw_frame_fallback():
         connection_timeout_s=0.5,
         command_timeout_s=0.05,
         max_retries=0,
+        require_version_match=False,  # ✅
     )
     await client.start()
 
