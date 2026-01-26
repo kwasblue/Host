@@ -12,6 +12,7 @@ __pycache__/
 .eggs/
 .Python
 *.log
+*.jsonl
 *.tmp
 *.cache/
 .cache/
