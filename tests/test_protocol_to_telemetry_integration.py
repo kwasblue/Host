@@ -10,24 +10,8 @@ from fakes.fake_async_transport import FakeAsyncTransport
 
 SECTION_IMU = 1
 
-def _build_sectioned_payload(ts_ms: int = 1234, seq: int = 7) -> bytes:
-    """
-    Telemetry BIN format:
-      u8  version (=1)
-      u16 seq
-      u32 ts_ms
-      u8  section_count
-      repeat:
-        u8  section_id
-        u16 section_len
-        u8[] section_bytes
 
-    IMU section bytes:
-      online(u8), ok(u8),
-      ax_mg(i16), ay_mg(i16), az_mg(i16),
-      gx_mdps(i16), gy_mdps(i16), gz_mdps(i16),
-      temp_c_centi(i16)
-    """
+def _build_sectioned_payload(ts_ms: int = 1234, seq: int = 7) -> bytes:
     version = 1
 
     # 2x u8 + 7x i16 = 9 items
@@ -51,34 +35,32 @@ def _build_sectioned_payload(ts_ms: int = 1234, seq: int = 7) -> bytes:
     payload += imu_bytes
     return bytes(payload)
 
+
 @pytest.mark.asyncio
 async def test_client_routes_telemetry_bin_to_packet_topic():
     bus = CapturingBus()
     transport = FakeAsyncTransport()
-    client = BaseAsyncRobotClient(
-        transport=transport,
-        bus=bus,
-        require_version_match=False,
-    )
+    client = BaseAsyncRobotClient(transport=transport, bus=bus, require_version_match=False)
 
     await client.start()
     try:
         telem_payload = _build_sectioned_payload(ts_ms=1234, seq=7)
 
-        # _on_frame expects body = [msg_type][payload...]
+        # body = [msg_type][payload...]
         body = bytes([protocol.MSG_TELEMETRY_BIN]) + telem_payload
         transport._inject_body(body)
 
-        # allow loop callbacks to run
+        # if bus delivery is deferred, yield once
         await asyncio.sleep(0)
 
-        # ✅ client publishes telemetry.binary
+        # ✅ client publishes telemetry.binary (not telemetry.packet)
         evt = bus.last("telemetry.binary")
         assert evt is not None, "Expected telemetry.binary publication for MSG_TELEMETRY_BIN"
 
-        packet = evt.data
+        packet = getattr(evt, "data", evt)
         assert packet.ts_ms == 1234
         assert packet.imu is not None
         assert packet.imu.online is True
+
     finally:
         await client.stop()
