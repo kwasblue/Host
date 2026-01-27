@@ -15704,3 +15704,5 @@
 {"ts": "2026-01-26 19:41:32", "dir": "rx", "cmd": "deactivate", "ok": true, "err": null, "dt_s": 0.1035139579907991}
 {"ts": "2026-01-26 19:41:32", "dir": "tx", "cmd": "disarm", "payload": null}
 {"ts": "2026-01-26 19:41:32", "dir": "rx", "cmd": "disarm", "ok": true, "err": null, "dt_s": 0.10324754199245945}
+{"ts": "2026-01-26 22:08:28", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-26 22:08:28", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}

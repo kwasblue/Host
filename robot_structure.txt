@@ -1,7 +1,7 @@
 ================================================================================
 📂 PROJECT STRUCTURE
-Generated: 2026-01-26 00:16:47
-Total Files: 78
+Generated: 2026-01-26 22:11:04
+Total Files: 80
 ================================================================================
 
 📄 boot_strap_structure.py
@@ -105,6 +105,29 @@ Total Files: 78
       (no methods)
    🧱 class HostSettings
       └── def load(self, cls, profile)
+
+📄 robot_host/logger/logger.py
+   🧱 class DedupFilter
+      ├── def __init__(self, cooldown_s)
+      └── def filter(self, record)
+   🧱 class Logger
+      ├── def __init__(self, log_file, logger_name, log_dir, level, timestamp_format, propagate, max_bytes, backup_count, console, dedup_cooldown_s)
+      ├── def get_logger(self)
+      ├── def debug(self, msg)
+      ├── def info(self, msg)
+      ├── def warning(self, msg)
+      ├── def error(self, msg)
+      └── def critical(self, msg)
+   🧱 class JsonlLogger
+      ├── def __init__(self, path, mkdirs)
+      ├── def write(self, event)
+      ├── def close(self)
+      ├── def __enter__(self)
+      ├── def __exit__(self, exc_type, exc, tb)
+      └── def _normalize(self, obj)
+   🧱 class MaraLogBundle
+      ├── def __init__(self, name, log_dir, level, console, max_bytes, backup_count, dedup_cooldown_s, jsonl_file, text_file)
+      └── def close(self)
 
 📄 robot_host/modules/camera_module.py
    🧱 class CameraModule
@@ -325,6 +348,10 @@ Total Files: 78
    ⚙️  def on_stepper(self, step)
    ⚙️  def on_dc(self, dc)
 
+📄 robot_host/telemetry/binary_parser.py
+   ⚙️  def _make_empty(self, ts_ms, raw_len, meta)
+   ⚙️  def parse_telemetry_bin(self, payload)
+
 📄 robot_host/telemetry/file_logger.py
    🧱 class TelemetryFileLogger
       ├── def __init__(self, bus, log_dir)
@@ -453,9 +480,6 @@ Total Files: 78
    ⚙️  def generate_tree_view(self, structure)
    ⚙️  def main()
 
-📄 test.py
-   ⚙️  def on_frame(self, body)
-
 📄 tests/conftest.py
    ⚙️  def bus()
    ⚙️  def transport()
@@ -565,10 +589,18 @@ Total Files: 78
 📄 tests/test_reliable_commander.py
    ⚙️  def _import_reliable_commander()
 
+📄 tests/test_telemetry_binary_parser.py
+   ⚙️  def build_sectioned_packet(self, ts_ms, seq, sections, ver)
+   ⚙️  def test_bin_telem_imu_v1_parses()
+   ⚙️  def test_bin_telem_ultrasonic_v1_parses()
+   ⚙️  def test_bin_telem_multiple_sections()
+   ⚙️  def test_bin_telem_unknown_section_is_ignored()
+   ⚙️  def test_bin_telem_short_header_graceful()
+
 ================================================================================
 📊 STATISTICS
 ================================================================================
-Total Classes:    73
-Total Functions:  129
-Total Methods:    178
+Total Classes:    77
+Total Functions:  136
+Total Methods:    195
 ================================================================================

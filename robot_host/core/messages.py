@@ -1,8 +1,10 @@
 from enum import IntEnum
+import protocol
 
 class MsgType(IntEnum):
-    PING      = 0x01
-    PONG      = 0x02
-    HEARTBEAT = 0x03
-    WHOAMI    = 0x10   # host -> robot
-    HELLO     = 0x11   # robot -> host
+    HEARTBEAT = protocol.MSG_HEARTBEAT
+    PING      = protocol.MSG_PING
+    PONG      = protocol.MSG_PONG
+    WHOAMI    = protocol.MSG_WHOAMI
+    CMD_JSON  = protocol.MSG_CMD_JSON
+    TELEMETRY_BIN = protocol.MSG_TELEMETRY_BIN

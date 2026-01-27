@@ -12,6 +12,7 @@ from . import protocol
 from .coms.connection_monitor import ConnectionMonitor
 from .coms.reliable_commander import ReliableCommander
 from robot_host.config.client_commands import RobotCommandsMixin
+from robot_host.telemetry.binary_parser import parse_telemetry_bin
 from robot_host.config.version import PROTOCOL_VERSION, CLIENT_VERSION
 
 
@@ -30,8 +31,9 @@ MSG_PONG             = protocol.MSG_PONG
 MSG_HEARTBEAT        = protocol.MSG_HEARTBEAT
 MSG_WHOAMI           = protocol.MSG_WHOAMI
 MSG_CMD_JSON         = protocol.MSG_CMD_JSON
-MSG_VERSION_REQUEST  = getattr(protocol, "MSG_VERSION_REQUEST", None)
-MSG_VERSION_RESPONSE = getattr(protocol, "MSG_VERSION_RESPONSE", None)
+MSG_VERSION_REQUEST  = protocol.MSG_VERSION_REQUEST
+MSG_VERSION_RESPONSE = protocol.MSG_VERSION_RESPONSE
+MSG_TELEMETRY_BIN    = protocol.MSG_TELEMETRY_BIN
 
 class BaseAsyncRobotClient:
     """
@@ -315,6 +317,9 @@ class BaseAsyncRobotClient:
             self._handle_version_response(payload)
         elif msg_type == MSG_CMD_JSON:
             self._handle_json_payload(payload)
+        elif msg_type == MSG_TELEMETRY_BIN:
+            telemetry_pkt = parse_telemetry_bin(payload)
+            self.bus.publish("telemetry.binary", telemetry_pkt) 
         else:
             self.bus.publish(
                 "raw_frame",
