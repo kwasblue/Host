@@ -5,6 +5,7 @@ import contextlib
 import json
 import asyncio
 import inspect
+import time
 from typing import Optional, Protocol, Callable, Dict, Any
 
 from .event_bus import EventBus
@@ -14,7 +15,7 @@ from .coms.reliable_commander import ReliableCommander
 from robot_host.config.client_commands import RobotCommandsMixin
 from robot_host.telemetry.binary_parser import parse_telemetry_bin
 from robot_host.config.version import PROTOCOL_VERSION, CLIENT_VERSION
-
+from robot_host.logger.logger import MaraLogBundle
 
 class HasSendBytes(Protocol):
     """Minimal transport interface used by the async robot client."""
@@ -68,6 +69,9 @@ class BaseAsyncRobotClient:
         self._robot_name: Optional[str] = None
         self._handshake_future: Optional[asyncio.Future] = None
         
+        # logging
+        self.logs = MaraLogBundle(name="mara_run", log_dir="logs", console=True)
+        
         # Connection monitor
         self.connection = ConnectionMonitor(
             timeout_s=connection_timeout_s,
@@ -80,6 +84,7 @@ class BaseAsyncRobotClient:
             send_func=self._send_json_cmd_internal,
             timeout_s=command_timeout_s,
             max_retries=max_retries,
+            on_event=lambda event, data: self.logs.events.write(event, **data)
         )
         
         self._heartbeat_interval_s = heartbeat_interval_s
@@ -270,28 +275,39 @@ class BaseAsyncRobotClient:
         print("[RobotClient] Connection lost!")
         self.commander.clear_pending()
         self.bus.publish("connection.lost", {})
+        self.logs.events.write("connection.lost")
     
     def _on_reconnect(self) -> None:
         print("[RobotClient] Connection restored!")
         self.bus.publish("connection.restored", {})
+        self.logs.events.write("connection.restored")
 
     # ---------- Heartbeat ----------
 
     async def _heartbeat_loop(self) -> None:
+        last_snapshot = 0.0
+        snapshot_every_s = 1.0
+
         while self._running:
             try:
-                # If transport exposes is_open(), avoid spamming errors during shutdown/churn
                 is_open = getattr(self.transport, "is_open", None)
                 if callable(is_open) and not is_open():
                     await asyncio.sleep(self._heartbeat_interval_s)
                     continue
 
-                # IMPORTANT: send a heartbeat FRAME, not a JSON cmd
                 await self._send_frame(MSG_HEARTBEAT, b"")
+
+                now = time.monotonic()
+                if (now - last_snapshot) >= snapshot_every_s:
+                    self.logs.events.write("stats.snapshot", **self.get_stats())
+                    last_snapshot = now
+
             except Exception as e:
                 if self._running:
                     print(f"[RobotClient] Heartbeat error: {e}")
+
             await asyncio.sleep(self._heartbeat_interval_s)
+
     # ---------- Incoming data path ----------
 
     def _on_frame(self, body: bytes) -> None:

@@ -15720,3 +15720,11 @@
 {"ts": "2026-01-26 23:19:22", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
 {"ts": "2026-01-26 23:23:42", "dir": "tx", "cmd": "client.start", "payload": null}
 {"ts": "2026-01-26 23:23:42", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-27 21:02:27", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-27 21:02:27", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-27 21:25:16", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-27 21:25:16", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-27 21:27:54", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-27 21:27:54", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-27 21:31:38", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-27 21:31:38", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
