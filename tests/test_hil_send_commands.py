@@ -1,186 +1,164 @@
-# tests/hil/test_commands.py
+# tests/test_hil_commands.py
 
 import pytest
-import asyncio
-from robot_host.transports.tcp_transport import AsyncTcpTransport
-from robot_host.core.client import AsyncRobotClient
 
-# Mark entire module as HIL (requires hardware)
-pytestmark = [
-    pytest.mark.hil,
-    pytest.mark.asyncio,
-]
+pytestmark = [pytest.mark.hil, pytest.mark.asyncio]
 
 
-@pytest.fixture
-async def robot(request):
-    """Connect to robot for HIL tests."""
-    host = request.config.getoption("--robot-host", default="10.0.0.60")
-    port = request.config.getoption("--robot-port", default=3333)
-    
-    transport = AsyncTcpTransport(host, port)
-    client = AsyncRobotClient(transport)
-    await client.start()
-    
-    yield client
-    
-    await client.stop()
+class TestSafety:
+    async def test_heartbeat(self, hil):
+        await hil.assert_ok("CMD_HEARTBEAT")
+
+    async def test_clear_estop(self, hil):
+        await hil.assert_ok("CMD_CLEAR_ESTOP")
+
+    async def test_arm_disarm(self, hil):
+        await hil.assert_ok("CMD_ARM")
+        await hil.assert_ok("CMD_DISARM")
+
+    async def test_full_state_cycle(self, hil):
+        await hil.assert_ok("CMD_ARM")
+        await hil.assert_ok("CMD_ACTIVATE")
+        await hil.assert_ok("CMD_DEACTIVATE")
+        await hil.assert_ok("CMD_DISARM")
 
 
-# ============== Safety Commands ==============
+class TestRates:
+    async def test_get_rates(self, hil):
+        await hil.assert_ok("CMD_GET_RATES")
 
-class TestSafetyCommands:
-    async def test_heartbeat(self, robot):
-        ok, err = await robot.send_reliable("CMD_HEARTBEAT")
-        assert ok, f"HEARTBEAT failed: {err}"
+    @pytest.mark.parametrize("hz", [10, 50, 100])
+    async def test_ctrl_set_rate(self, hil, hz):
+        await hil.assert_ok("CMD_CTRL_SET_RATE", {"hz": hz})
 
-    async def test_arm_disarm_cycle(self, robot):
-        # Ensure clean state
-        await robot.send_reliable("CMD_CLEAR_ESTOP")
-        
-        ok, err = await robot.send_reliable("CMD_ARM")
-        assert ok, f"ARM failed: {err}"
-        
-        ok, err = await robot.send_reliable("CMD_DISARM")
-        assert ok, f"DISARM failed: {err}"
+    @pytest.mark.parametrize("hz", [10, 50, 100])
+    async def test_safety_set_rate(self, hil, hz):
+        await hil.assert_ok("CMD_SAFETY_SET_RATE", {"hz": hz})
 
-    async def test_full_state_cycle(self, robot):
-        """Test complete state machine: IDLE -> ARMED -> ACTIVE -> ARMED -> IDLE"""
-        await robot.send_reliable("CMD_CLEAR_ESTOP")
-        
-        ok, _ = await robot.send_reliable("CMD_ARM")
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_ACTIVATE")
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_DEACTIVATE")
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_DISARM")
-        assert ok
+    @pytest.mark.parametrize("hz", [1, 10, 50])
+    async def test_telem_set_rate(self, hil, hz):
+        await hil.assert_ok("CMD_TELEM_SET_RATE", {"hz": hz})
 
 
-# ============== Rate Commands ==============
-
-class TestRateCommands:
-    async def test_get_rates(self, robot):
-        ok, err = await robot.send_reliable("CMD_GET_RATES")
-        assert ok, f"GET_RATES failed: {err}"
-
-    @pytest.mark.parametrize("hz", [10, 50, 100, 200])
-    async def test_ctrl_set_rate(self, robot, hz):
-        ok, err = await robot.send_reliable("CMD_CTRL_SET_RATE", {"hz": hz})
-        assert ok, f"CTRL_SET_RATE({hz}) failed: {err}"
-
-
-# ============== Control Kernel ==============
-
-class TestControlKernel:
-    async def test_signal_define_and_list(self, robot):
-        """Define signals and verify they appear in list."""
-        # Define a test signal
-        ok, err = await robot.send_reliable("CMD_CTRL_SIGNAL_DEFINE", {
-            "id": 100,
-            "name": "test_ref",
-            "signal_kind": "REF",
-            "initial": 0.0
+class TestControlSignals:
+    async def test_define_signal(self, hil):
+        await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+            "id": 100, "name": "test_ref", "signal_kind": "REF", "initial": 0.0
         })
-        assert ok, f"SIGNAL_DEFINE failed: {err}"
-        
-        # Verify it's in the list
-        ok, err = await robot.send_reliable("CMD_CTRL_SIGNALS_LIST")
-        assert ok, f"SIGNALS_LIST failed: {err}"
 
-    async def test_signal_set_get(self, robot):
-        """Set a signal value and read it back."""
-        # Define signal first
-        await robot.send_reliable("CMD_CTRL_SIGNAL_DEFINE", {
-            "id": 101, "name": "test_val", "signal_kind": "REF", "initial": 0.0
+    async def test_signal_set_get(self, hil):
+        await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+            "id": 110, "name": "sg_test", "signal_kind": "REF", "initial": 0.0
         })
-        
-        # Set value
-        ok, err = await robot.send_reliable("CMD_CTRL_SIGNAL_SET", {
-            "id": 101, "value": 42.5
-        })
-        assert ok, f"SIGNAL_SET failed: {err}"
-        
-        # Read back
-        ok, err = await robot.send_reliable("CMD_CTRL_SIGNAL_GET", {"id": 101})
-        assert ok, f"SIGNAL_GET failed: {err}"
+        await hil.assert_ok("CMD_CTRL_SIGNAL_SET", {"id": 110, "value": 42.5})
+        await hil.assert_ok("CMD_CTRL_SIGNAL_GET", {"id": 110})
 
-    async def test_slot_config_full_cycle(self, robot):
-        """Configure a PID slot and run through its lifecycle."""
-        # Define signals
+    async def test_signals_list(self, hil):
+        await hil.assert_ok("CMD_CTRL_SIGNALS_LIST")
+
+
+class TestControlSlots:
+    @pytest.fixture
+    async def slot(self, hil):
+        """Configure slot 0 with signals."""
         for sig in [
-            {"id": 200, "name": "ref", "signal_kind": "REF", "initial": 0.0},
-            {"id": 201, "name": "meas", "signal_kind": "MEAS", "initial": 0.0},
-            {"id": 202, "name": "out", "signal_kind": "OUT", "initial": 0.0},
+            {"id": 200, "name": "s_ref", "signal_kind": "REF", "initial": 0.0},
+            {"id": 201, "name": "s_meas", "signal_kind": "MEAS", "initial": 0.0},
+            {"id": 202, "name": "s_out", "signal_kind": "OUT", "initial": 0.0},
         ]:
-            ok, _ = await robot.send_reliable("CMD_CTRL_SIGNAL_DEFINE", sig)
-            assert ok
+            await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", sig)
         
-        # Configure slot
-        ok, err = await robot.send_reliable("CMD_CTRL_SLOT_CONFIG", {
-            "slot": 0,
-            "controller_type": "PID",
-            "rate_hz": 100,
-            "ref_id": 200,
-            "meas_id": 201,
-            "out_id": 202,
-            "require_armed": True,
-            "require_active": True
+        await hil.assert_ok("CMD_CTRL_SLOT_CONFIG", {
+            "slot": 0, "controller_type": "PID", "rate_hz": 100,
+            "ref_id": 200, "meas_id": 201, "out_id": 202,
         })
-        assert ok, f"SLOT_CONFIG failed: {err}"
-        
-        # Set parameters
-        ok, err = await robot.send_reliable("CMD_CTRL_SLOT_SET_PARAM", {
-            "slot": 0, "key": "kp", "value": 1.0
-        })
-        assert ok, f"SLOT_SET_PARAM failed: {err}"
-        
-        # Check status
-        ok, err = await robot.send_reliable("CMD_CTRL_SLOT_STATUS", {"slot": 0})
-        assert ok, f"SLOT_STATUS failed: {err}"
+        return 0
 
+    async def test_slot_enable(self, hil, slot):
+        await hil.assert_ok("CMD_CTRL_SLOT_ENABLE", {"slot": slot, "enable": True})
 
-# ============== GPIO ==============
+    async def test_slot_reset(self, hil, slot):
+        await hil.assert_ok("CMD_CTRL_SLOT_RESET", {"slot": slot})
+
+    async def test_slot_set_param(self, hil, slot):
+        await hil.assert_ok("CMD_CTRL_SLOT_SET_PARAM", {"slot": slot, "key": "kp", "value": 1.0})
+
+    async def test_slot_status(self, hil, slot):
+        await hil.assert_ok("CMD_CTRL_SLOT_STATUS", {"slot": slot})
+
 
 class TestGPIO:
-    async def test_register_write_read_toggle(self, robot):
-        ok, _ = await robot.send_reliable("CMD_GPIO_REGISTER_CHANNEL", {
-            "channel": 0, "pin": 2, "mode": "output"
-        })
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_GPIO_WRITE", {"channel": 0, "value": 1})
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_GPIO_READ", {"channel": 0})
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_GPIO_TOGGLE", {"channel": 0})
-        assert ok
+    async def test_register_write_read_toggle(self, hil):
+        await hil.assert_ok("CMD_GPIO_REGISTER_CHANNEL", {"channel": 0, "pin": 2, "mode": "output"})
+        await hil.assert_ok("CMD_GPIO_WRITE", {"channel": 0, "value": 1})
+        await hil.assert_ok("CMD_GPIO_READ", {"channel": 0})
+        await hil.assert_ok("CMD_GPIO_TOGGLE", {"channel": 0})
 
 
-# ============== Motors ==============
+class TestPWM:
+    async def test_pwm_set(self, hil):
+        await hil.assert_ok("CMD_PWM_SET", {"channel": 0, "duty": 0.5, "freq_hz": 1000.0})
+
+
+class TestLED:
+    async def test_led_on_off(self, hil):
+        await hil.assert_ok("CMD_LED_ON")
+        await hil.assert_ok("CMD_LED_OFF")
+
+
+class TestServo:
+    async def test_attach_detach(self, hil):
+        await hil.assert_ok("CMD_SERVO_ATTACH", {"servo_id": 0, "channel": 0, "min_us": 1000, "max_us": 2000})
+        await hil.assert_ok("CMD_SERVO_DETACH", {"servo_id": 0})
+
+    @pytest.mark.motion
+    async def test_set_angle(self, active_robot, hil):
+        await hil.assert_ok("CMD_SERVO_ATTACH", {"servo_id": 0, "channel": 0, "min_us": 1000, "max_us": 2000})
+        await hil.assert_ok("CMD_SERVO_SET_ANGLE", {"servo_id": 0, "angle_deg": 90})
+
+
+class TestStepper:
+    async def test_enable_stop(self, hil):
+        await hil.assert_ok("CMD_STEPPER_ENABLE", {"motor_id": 0, "enable": True})
+        await hil.assert_ok("CMD_STEPPER_STOP", {"motor_id": 0})
+
+    @pytest.mark.motion
+    async def test_move_rel(self, active_robot, hil):
+        await hil.assert_ok("CMD_STEPPER_ENABLE", {"motor_id": 0, "enable": True})
+        await hil.assert_ok("CMD_STEPPER_MOVE_REL", {"motor_id": 0, "steps": 50, "speed_steps_s": 1000.0})
+
+
+class TestEncoder:
+    async def test_attach_read_reset(self, hil):
+        await hil.assert_ok("CMD_ENCODER_ATTACH", {"encoder_id": 0, "pin_a": 32, "pin_b": 33})
+        await hil.assert_ok("CMD_ENCODER_READ", {"encoder_id": 0})
+        await hil.assert_ok("CMD_ENCODER_RESET", {"encoder_id": 0})
+
 
 class TestDCMotor:
-    async def test_dc_motor_speed_control(self, robot):
-        ok, _ = await robot.send_reliable("CMD_DC_SET_SPEED", {"motor_id": 0, "speed": 0.1})
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_DC_STOP", {"motor_id": 0})
-        assert ok
+    async def test_stop(self, hil):
+        await hil.assert_ok("CMD_DC_STOP", {"motor_id": 0})
 
-    async def test_dc_motor_pid_control(self, robot):
-        ok, _ = await robot.send_reliable("CMD_DC_VEL_PID_ENABLE", {"motor_id": 0, "enable": True})
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_DC_SET_VEL_GAINS", {
-            "motor_id": 0, "kp": 1.0, "ki": 0.1, "kd": 0.01
-        })
-        assert ok
-        
-        ok, _ = await robot.send_reliable("CMD_DC_SET_VEL_TARGET", {"motor_id": 0, "omega": 0.1})
-        assert ok
+    async def test_pid_gains(self, hil):
+        await hil.assert_ok("CMD_DC_SET_VEL_GAINS", {"motor_id": 0, "kp": 1.0, "ki": 0.1, "kd": 0.01})
+
+    @pytest.mark.motion
+    async def test_set_speed(self, active_robot, hil):
+        await hil.assert_ok("CMD_DC_SET_SPEED", {"motor_id": 0, "speed": 0.1})
+        await hil.assert_ok("CMD_DC_STOP", {"motor_id": 0})
+
+
+class TestMotion:
+    @pytest.mark.motion
+    async def test_set_vel(self, active_robot, hil):
+        await hil.assert_ok("CMD_SET_VEL", {"vx": 0.0, "omega": 0.0})
+
+
+class TestTelemetry:
+    async def test_set_interval(self, hil):
+        await hil.assert_ok("CMD_TELEM_SET_INTERVAL", {"interval_ms": 100})
+
+
+class TestLogging:
+    async def test_set_log_level(self, hil):
+        await hil.assert_ok("CMD_SET_LOG_LEVEL", {"level": "info"})

@@ -1,3 +1,5 @@
+# tests/conftest.py
+
 import pytest
 from fakes.fake_async_transport import FakeAsyncTransport
 from helpers import CapturingBus
@@ -6,6 +8,9 @@ import json
 import time
 from pathlib import Path
 import asyncio
+from typing import Optional
+
+# ============== Existing Fixtures ==============
 
 @pytest.fixture
 def bus():
@@ -16,11 +21,158 @@ def bus():
 def transport():
     return FakeAsyncTransport(auto_ack=True)
 
+
+# ============== Pytest Configuration ==============
+
 def pytest_addoption(parser):
     parser.addoption("--mcu-port", action="store", default=os.getenv("MCU_PORT", ""))
+    parser.addoption("--robot-host", action="store", default=os.getenv("ROBOT_HOST", "10.0.0.60"))
+    parser.addoption("--robot-port", action="store", type=int, default=int(os.getenv("ROBOT_PORT", "3333")))
+    parser.addoption("--run-hil", action="store_true", default=False, help="Run HIL tests")
+    parser.addoption("--hil-timeout", action="store", type=float, default=5.0, help="HIL command timeout")
+
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "hil: hardware-in-the-loop tests (requires MCU connected)")
+    config.addinivalue_line("markers", "slow: marks tests as slow")
+    config.addinivalue_line("markers", "motion: tests that cause physical motion")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip HIL tests unless --run-hil is specified."""
+    if not config.getoption("--run-hil"):
+        skip_hil = pytest.mark.skip(reason="Need --run-hil option to run HIL tests")
+        for item in items:
+            if "hil" in item.keywords:
+                item.add_marker(skip_hil)
+
+
+# ============== HIL Fixtures ==============
+
+@pytest.fixture(scope="session")
+def robot_host(request) -> str:
+    return request.config.getoption("--robot-host")
+
+
+@pytest.fixture(scope="session")
+def robot_port(request) -> int:
+    return request.config.getoption("--robot-port")
+
+
+@pytest.fixture(scope="session")
+def hil_timeout(request) -> float:
+    return request.config.getoption("--hil-timeout")
+
+
+@pytest.fixture
+async def robot(request, robot_host, robot_port, hil_timeout, tmp_path):
+    """
+    Connected AsyncRobotClient for HIL tests.
+    Ensures safe state on setup and teardown.
+    """
+    from robot_host.transports.tcp_transport import AsyncTcpTransport
+    from robot_host.core.client import AsyncRobotClient
+    
+    transport = AsyncTcpTransport(robot_host, robot_port)
+    client = AsyncRobotClient(
+        transport,
+        command_timeout_s=hil_timeout,
+        handshake_timeout_s=hil_timeout * 2,
+    )
+    
+    # Attach event logging
+    test_name = request.node.name
+    log_path = tmp_path / f"hil_{test_name}.log"
+    close_log = attach_bus_dump(client, str(log_path))
+    
+    try:
+        await client.start()
+        
+        # Ensure clean starting state
+        for cmd in ["CMD_CLEAR_ESTOP", "CMD_STOP", "CMD_DEACTIVATE", "CMD_DISARM"]:
+            try:
+                await client.send_reliable(cmd)
+            except Exception:
+                pass
+        
+        yield client
+        
+    finally:
+        # Safe teardown
+        for cmd in ["CMD_STOP", "CMD_DEACTIVATE", "CMD_DISARM"]:
+            try:
+                await client.send_reliable(cmd)
+            except Exception:
+                pass
+        
+        try:
+            await client.stop()
+        except Exception:
+            pass
+        
+        close_log()
+
+
+@pytest.fixture
+async def armed_robot(robot):
+    """Robot in ARMED state."""
+    ok, err = await robot.send_reliable("CMD_ARM")
+    assert ok, f"Failed to arm: {err}"
+    yield robot
+
+
+@pytest.fixture
+async def active_robot(armed_robot):
+    """Robot in ACTIVE state."""
+    ok, err = await armed_robot.send_reliable("CMD_ACTIVATE")
+    assert ok, f"Failed to activate: {err}"
+    yield armed_robot
+
+
+# ============== HIL Assertion Helper ==============
+
+@pytest.fixture
+def hil(robot):
+    """Helper for cleaner HIL assertions."""
+    class HIL:
+        def __init__(self, r):
+            self.robot = r
+        
+        async def assert_ok(self, cmd, payload=None, msg=""):
+            ok, err = await self.robot.send_reliable(cmd, payload or {})
+            assert ok, f"{cmd} failed: {err}. {msg}"
+            return ok, err
+        
+        async def assert_fails(self, cmd, payload=None, expected_error=None):
+            ok, err = await self.robot.send_reliable(cmd, payload or {})
+            assert not ok, f"{cmd} should have failed"
+            if expected_error:
+                assert expected_error in str(err)
+            return ok, err
+    
+    return HIL(robot)
+
+
+# ============== Event Loop ==============
+
+@pytest.fixture
+def event_loop():
+    """Fresh loop per test."""
+    loop = asyncio.new_event_loop()
+    try:
+        yield loop
+    finally:
+        pending = asyncio.all_tasks(loop)
+        for t in pending:
+            t.cancel()
+        if pending:
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
+
+
+# ============== Bus Dump Helper ==============
+
 def attach_bus_dump(client, path: str, cycle: int | None = None):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     f = open(path, "a", buffering=1)
@@ -40,51 +192,15 @@ def attach_bus_dump(client, path: str, cycle: int | None = None):
     if not callable(sub):
         return lambda: f.close()
 
-    # If your bus supports wildcard, use it. If not, list topics you care about.
     wildcard = getattr(client.bus, "subscribe_all", None)
     if callable(wildcard):
         wildcard(lambda topic, obj: log(topic, obj))
     else:
-        # Add the topics that exist in *your* bus.
-        for t in [
-            "state.changed",
-            "connection.lost",
-            "connection.restored",
-            "safety.triggered",
-            "safety.cleared",
-            "cmd.ack",
-            "cmd.nack",
-            "telemetry",
-        ]:
+        for t in ["state.changed", "connection.lost", "connection.restored", 
+                  "telemetry", "telemetry.raw", "telemetry.binary"]:
             try:
                 sub(t, lambda obj, tt=t: log(tt, obj))
             except Exception:
                 pass
 
-    def close():
-        try:
-            f.close()
-        except Exception:
-            pass
-    return close
-
-
-@pytest.fixture
-def event_loop():
-    """
-    Fresh loop per test. Ensures no background tasks leak into the next test.
-    This is THE most common cause of "random disarm/deactivate" during long HIL tests.
-    """
-    loop = asyncio.new_event_loop()
-    try:
-        yield loop
-    finally:
-        # Cancel anything still running
-        pending = asyncio.all_tasks(loop)
-        for t in pending:
-            t.cancel()
-        if pending:
-            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
+    return lambda: f.close()
