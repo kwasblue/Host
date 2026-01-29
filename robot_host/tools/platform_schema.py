@@ -160,6 +160,77 @@ COMMANDS: dict[str, dict] = {
     },
 
     # ----------------------------------------------------------------------
+    # Control Kernel - Signal Bus
+    # ----------------------------------------------------------------------
+    "CMD_CTRL_SIGNAL_DEFINE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Define a new signal in the signal bus. Only allowed when IDLE.",
+        "payload": {
+            "id": {
+                "type": "int",
+                "required": True,
+                "description": "Unique signal ID.",
+            },
+            "name": {
+                "type": "string",
+                "required": True,
+                "description": "Human-readable signal name.",
+            },
+            "signal_kind": {
+                "type": "string",
+                "required": True,
+                "enum": ["REF", "MEAS", "OUT"],
+                "description": "Signal kind: REF (setpoint), MEAS (measurement), OUT (output).",
+            },
+            "initial": {
+                "type": "float",
+                "required": False,
+                "default": 0.0,
+                "description": "Initial value.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SIGNAL_SET": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set a signal value in the signal bus.",
+        "payload": {
+            "id": {
+                "type": "int",
+                "required": True,
+                "description": "Signal ID.",
+            },
+            "value": {
+                "type": "float",
+                "required": True,
+                "description": "Value to set.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SIGNAL_GET": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Get a signal value from the signal bus.",
+        "payload": {
+            "id": {
+                "type": "int",
+                "required": True,
+                "description": "Signal ID.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SIGNALS_LIST": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "List all defined signals in the signal bus.",
+        "payload": {},
+    },
+
+    # ----------------------------------------------------------------------
     # Control Kernel - Slot Configuration
     # ----------------------------------------------------------------------
     "CMD_CTRL_SLOT_CONFIG": {
@@ -174,11 +245,11 @@ COMMANDS: dict[str, dict] = {
                 "max": 7,
                 "description": "Slot index (0-7).",
             },
-            "type": {
+            "controller_type": {
                 "type": "string",
                 "required": True,
-                "enum": ["PID", "SS"],
-                "description": "Controller type: PID or StateSpace.",
+                "enum": ["PID", "STATE_SPACE", "SS"],
+                "description": "Controller type: PID or STATE_SPACE.",
             },
             "rate_hz": {
                 "type": "int",
@@ -188,20 +259,56 @@ COMMANDS: dict[str, dict] = {
                 "max": 1000,
                 "description": "Controller update rate in Hz.",
             },
+            # PID signals (used when controller_type = "PID")
             "ref_id": {
                 "type": "int",
-                "required": True,
-                "description": "Signal ID for reference/setpoint.",
+                "required": False,
+                "description": "Signal ID for reference/setpoint (PID mode).",
             },
             "meas_id": {
                 "type": "int",
-                "required": True,
-                "description": "Signal ID for measurement/feedback.",
+                "required": False,
+                "description": "Signal ID for measurement/feedback (PID mode).",
             },
             "out_id": {
                 "type": "int",
-                "required": True,
-                "description": "Signal ID for control output.",
+                "required": False,
+                "description": "Signal ID for control output (PID mode).",
+            },
+            # State-space signals (used when controller_type = "STATE_SPACE" or "SS")
+            "num_states": {
+                "type": "int",
+                "required": False,
+                "default": 2,
+                "min": 1,
+                "max": 6,
+                "description": "Number of state variables (STATE_SPACE mode).",
+            },
+            "num_inputs": {
+                "type": "int",
+                "required": False,
+                "default": 1,
+                "min": 1,
+                "max": 2,
+                "description": "Number of control inputs (STATE_SPACE mode).",
+            },
+            "state_ids": {
+                "type": "array",
+                "items": {"type": "int"},
+                "required": False,
+                "description": "Signal IDs for state measurements (STATE_SPACE mode).",
+            },
+            "ref_ids": {
+                "type": "array",
+                "items": {"type": "int"},
+                "required": False,
+                "description": "Signal IDs for state references (STATE_SPACE mode).",
+            },
+            "output_ids": {
+                "type": "array",
+                "items": {"type": "int"},
+                "required": False,
+                "description": "Signal IDs for control outputs (STATE_SPACE mode).",
             },
             "require_armed": {
                 "type": "bool",
@@ -256,7 +363,7 @@ COMMANDS: dict[str, dict] = {
     "CMD_CTRL_SLOT_SET_PARAM": {
         "kind": "cmd",
         "direction": "host->mcu",
-        "description": "Set a parameter on a control slot's controller.",
+        "description": "Set a scalar parameter on a control slot's controller.",
         "payload": {
             "slot": {
                 "type": "int",
@@ -268,12 +375,38 @@ COMMANDS: dict[str, dict] = {
             "key": {
                 "type": "string",
                 "required": True,
-                "description": "Parameter name (e.g., 'kp', 'ki', 'kd', 'out_min', 'out_max').",
+                "description": "Parameter name (e.g., 'kp', 'ki', 'kd', 'out_min', 'out_max' for PID; 'k00', 'ki0', 'u0_min' for STATE_SPACE).",
             },
             "value": {
                 "type": "float",
                 "required": True,
                 "description": "Parameter value.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SLOT_SET_PARAM_ARRAY": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set an array parameter on a control slot (e.g., gain matrix K for state-space).",
+        "payload": {
+            "slot": {
+                "type": "int",
+                "required": True,
+                "min": 0,
+                "max": 7,
+                "description": "Slot index (0-7).",
+            },
+            "key": {
+                "type": "string",
+                "required": True,
+                "description": "Parameter name ('K' = state feedback, 'Kr' = reference feedforward, 'Ki' = integral gains).",
+            },
+            "values": {
+                "type": "array",
+                "items": {"type": "float"},
+                "required": True,
+                "description": "Array of float values. For K/Kr: row-major order [k00,k01,...,k10,k11,...]. For Ki: one per output.",
             },
         },
     },
@@ -294,78 +427,7 @@ COMMANDS: dict[str, dict] = {
     },
 
     # ----------------------------------------------------------------------
-    # Control Kernel - Signal Bus
-    # ----------------------------------------------------------------------
-    "CMD_CTRL_SIGNAL_DEFINE": {
-        "kind": "cmd",
-        "direction": "host->mcu",
-        "description": "Define a new signal in the signal bus. Only allowed when IDLE.",
-        "payload": {
-            "id": {
-                "type": "int",
-                "required": True,
-                "description": "Unique signal ID.",
-            },
-            "name": {
-                "type": "string",
-                "required": True,
-                "description": "Human-readable signal name.",
-            },
-            "kind": {
-                "type": "string",
-                "required": True,
-                "enum": ["REF", "MEAS", "OUT"],
-                "description": "Signal kind: REF (setpoint), MEAS (measurement), OUT (output).",
-            },
-            "initial": {
-                "type": "float",
-                "required": False,
-                "default": 0.0,
-                "description": "Initial value.",
-            },
-        },
-    },
-
-    "CMD_CTRL_SIGNAL_SET": {
-        "kind": "cmd",
-        "direction": "host->mcu",
-        "description": "Set a signal value in the signal bus.",
-        "payload": {
-            "id": {
-                "type": "int",
-                "required": True,
-                "description": "Signal ID.",
-            },
-            "value": {
-                "type": "float",
-                "required": True,
-                "description": "Value to set.",
-            },
-        },
-    },
-
-    "CMD_CTRL_SIGNAL_GET": {
-        "kind": "cmd",
-        "direction": "host->mcu",
-        "description": "Get a signal value from the signal bus.",
-        "payload": {
-            "id": {
-                "type": "int",
-                "required": True,
-                "description": "Signal ID.",
-            },
-        },
-    },
-
-    "CMD_CTRL_SIGNALS_LIST": {
-        "kind": "cmd",
-        "direction": "host->mcu",
-        "description": "List all defined signals in the signal bus.",
-        "payload": {},
-    },
-
-    # ----------------------------------------------------------------------
-    # Robot Core (Legacy - consider deprecating SET_MODE)
+    # Robot Core
     # ----------------------------------------------------------------------
     "CMD_SET_MODE": {
         "kind": "cmd",

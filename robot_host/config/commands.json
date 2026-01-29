@@ -96,135 +96,6 @@
         }
       }
     },
-    "CMD_CTRL_SLOT_CONFIG": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Configure a control slot with controller type and signal routing. Only allowed when IDLE.",
-      "payload": {
-        "slot": {
-          "type": "int",
-          "required": true,
-          "min": 0,
-          "max": 7,
-          "description": "Slot index (0-7)."
-        },
-        "type": {
-          "type": "string",
-          "required": true,
-          "enum": [
-            "PID",
-            "SS"
-          ],
-          "description": "Controller type: PID or StateSpace."
-        },
-        "rate_hz": {
-          "type": "int",
-          "required": false,
-          "default": 100,
-          "min": 1,
-          "max": 1000,
-          "description": "Controller update rate in Hz."
-        },
-        "ref_id": {
-          "type": "int",
-          "required": true,
-          "description": "Signal ID for reference/setpoint."
-        },
-        "meas_id": {
-          "type": "int",
-          "required": true,
-          "description": "Signal ID for measurement/feedback."
-        },
-        "out_id": {
-          "type": "int",
-          "required": true,
-          "description": "Signal ID for control output."
-        },
-        "require_armed": {
-          "type": "bool",
-          "required": false,
-          "default": true,
-          "description": "Only run when robot is armed."
-        },
-        "require_active": {
-          "type": "bool",
-          "required": false,
-          "default": true,
-          "description": "Only run when robot is active."
-        }
-      }
-    },
-    "CMD_CTRL_SLOT_ENABLE": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Enable or disable a configured control slot.",
-      "payload": {
-        "slot": {
-          "type": "int",
-          "required": true,
-          "min": 0,
-          "max": 7,
-          "description": "Slot index (0-7)."
-        },
-        "enable": {
-          "type": "bool",
-          "required": true,
-          "description": "True to enable, False to disable."
-        }
-      }
-    },
-    "CMD_CTRL_SLOT_RESET": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Reset a control slot's internal state (integrators, etc).",
-      "payload": {
-        "slot": {
-          "type": "int",
-          "required": true,
-          "min": 0,
-          "max": 7,
-          "description": "Slot index (0-7)."
-        }
-      }
-    },
-    "CMD_CTRL_SLOT_SET_PARAM": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Set a parameter on a control slot's controller.",
-      "payload": {
-        "slot": {
-          "type": "int",
-          "required": true,
-          "min": 0,
-          "max": 7,
-          "description": "Slot index (0-7)."
-        },
-        "key": {
-          "type": "string",
-          "required": true,
-          "description": "Parameter name (e.g., 'kp', 'ki', 'kd', 'out_min', 'out_max')."
-        },
-        "value": {
-          "type": "float",
-          "required": true,
-          "description": "Parameter value."
-        }
-      }
-    },
-    "CMD_CTRL_SLOT_STATUS": {
-      "kind": "cmd",
-      "direction": "host->mcu",
-      "description": "Get status of a control slot.",
-      "payload": {
-        "slot": {
-          "type": "int",
-          "required": true,
-          "min": 0,
-          "max": 7,
-          "description": "Slot index (0-7)."
-        }
-      }
-    },
     "CMD_CTRL_SIGNAL_DEFINE": {
       "kind": "cmd",
       "direction": "host->mcu",
@@ -240,7 +111,7 @@
           "required": true,
           "description": "Human-readable signal name."
         },
-        "kind": {
+        "signal_kind": {
           "type": "string",
           "required": true,
           "enum": [
@@ -292,6 +163,203 @@
       "direction": "host->mcu",
       "description": "List all defined signals in the signal bus.",
       "payload": {}
+    },
+    "CMD_CTRL_SLOT_CONFIG": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Configure a control slot with controller type and signal routing. Only allowed when IDLE.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 7,
+          "description": "Slot index (0-7)."
+        },
+        "controller_type": {
+          "type": "string",
+          "required": true,
+          "enum": [
+            "PID",
+            "STATE_SPACE",
+            "SS"
+          ],
+          "description": "Controller type: PID or STATE_SPACE."
+        },
+        "rate_hz": {
+          "type": "int",
+          "required": false,
+          "default": 100,
+          "min": 1,
+          "max": 1000,
+          "description": "Controller update rate in Hz."
+        },
+        "ref_id": {
+          "type": "int",
+          "required": false,
+          "description": "Signal ID for reference/setpoint (PID mode)."
+        },
+        "meas_id": {
+          "type": "int",
+          "required": false,
+          "description": "Signal ID for measurement/feedback (PID mode)."
+        },
+        "out_id": {
+          "type": "int",
+          "required": false,
+          "description": "Signal ID for control output (PID mode)."
+        },
+        "num_states": {
+          "type": "int",
+          "required": false,
+          "default": 2,
+          "min": 1,
+          "max": 6,
+          "description": "Number of state variables (STATE_SPACE mode)."
+        },
+        "num_inputs": {
+          "type": "int",
+          "required": false,
+          "default": 1,
+          "min": 1,
+          "max": 2,
+          "description": "Number of control inputs (STATE_SPACE mode)."
+        },
+        "state_ids": {
+          "type": "array",
+          "items": {
+            "type": "int"
+          },
+          "required": false,
+          "description": "Signal IDs for state measurements (STATE_SPACE mode)."
+        },
+        "ref_ids": {
+          "type": "array",
+          "items": {
+            "type": "int"
+          },
+          "required": false,
+          "description": "Signal IDs for state references (STATE_SPACE mode)."
+        },
+        "output_ids": {
+          "type": "array",
+          "items": {
+            "type": "int"
+          },
+          "required": false,
+          "description": "Signal IDs for control outputs (STATE_SPACE mode)."
+        },
+        "require_armed": {
+          "type": "bool",
+          "required": false,
+          "default": true,
+          "description": "Only run when robot is armed."
+        },
+        "require_active": {
+          "type": "bool",
+          "required": false,
+          "default": true,
+          "description": "Only run when robot is active."
+        }
+      }
+    },
+    "CMD_CTRL_SLOT_ENABLE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Enable or disable a configured control slot.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 7,
+          "description": "Slot index (0-7)."
+        },
+        "enable": {
+          "type": "bool",
+          "required": true,
+          "description": "True to enable, False to disable."
+        }
+      }
+    },
+    "CMD_CTRL_SLOT_RESET": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Reset a control slot's internal state (integrators, etc).",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 7,
+          "description": "Slot index (0-7)."
+        }
+      }
+    },
+    "CMD_CTRL_SLOT_SET_PARAM": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set a scalar parameter on a control slot's controller.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 7,
+          "description": "Slot index (0-7)."
+        },
+        "key": {
+          "type": "string",
+          "required": true,
+          "description": "Parameter name (e.g., 'kp', 'ki', 'kd', 'out_min', 'out_max' for PID; 'k00', 'ki0', 'u0_min' for STATE_SPACE)."
+        },
+        "value": {
+          "type": "float",
+          "required": true,
+          "description": "Parameter value."
+        }
+      }
+    },
+    "CMD_CTRL_SLOT_SET_PARAM_ARRAY": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set an array parameter on a control slot (e.g., gain matrix K for state-space).",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 7,
+          "description": "Slot index (0-7)."
+        },
+        "key": {
+          "type": "string",
+          "required": true,
+          "description": "Parameter name ('K' = state feedback, 'Kr' = reference feedforward, 'Ki' = integral gains)."
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "float"
+          },
+          "required": true,
+          "description": "Array of float values. For K/Kr: row-major order [k00,k01,...,k10,k11,...]. For Ki: one per output."
+        }
+      }
+    },
+    "CMD_CTRL_SLOT_STATUS": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Get status of a control slot.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 7,
+          "description": "Slot index (0-7)."
+        }
+      }
     },
     "CMD_SET_MODE": {
       "kind": "cmd",

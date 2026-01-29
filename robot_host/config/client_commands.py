@@ -73,52 +73,12 @@ class RobotCommandsMixin:
         payload['hz'] = hz
         await self.send_json_cmd('CMD_TELEM_SET_RATE', payload)
 
-    async def cmd_ctrl_slot_config(self, slot: int, type: str, ref_id: int, meas_id: int, out_id: int, rate_hz: int = 100, require_armed: bool = True, require_active: bool = True) -> None:
-        """Configure a control slot with controller type and signal routing. Only allowed when IDLE. (CMD_CTRL_SLOT_CONFIG)"""
-        payload: dict[str, Any] = {}
-        payload['slot'] = slot
-        payload['type'] = type
-        payload['ref_id'] = ref_id
-        payload['meas_id'] = meas_id
-        payload['out_id'] = out_id
-        payload['rate_hz'] = rate_hz
-        payload['require_armed'] = require_armed
-        payload['require_active'] = require_active
-        await self.send_json_cmd('CMD_CTRL_SLOT_CONFIG', payload)
-
-    async def cmd_ctrl_slot_enable(self, slot: int, enable: bool) -> None:
-        """Enable or disable a configured control slot. (CMD_CTRL_SLOT_ENABLE)"""
-        payload: dict[str, Any] = {}
-        payload['slot'] = slot
-        payload['enable'] = enable
-        await self.send_json_cmd('CMD_CTRL_SLOT_ENABLE', payload)
-
-    async def cmd_ctrl_slot_reset(self, slot: int) -> None:
-        """Reset a control slot's internal state (integrators, etc). (CMD_CTRL_SLOT_RESET)"""
-        payload: dict[str, Any] = {}
-        payload['slot'] = slot
-        await self.send_json_cmd('CMD_CTRL_SLOT_RESET', payload)
-
-    async def cmd_ctrl_slot_set_param(self, slot: int, key: str, value: float) -> None:
-        """Set a parameter on a control slot's controller. (CMD_CTRL_SLOT_SET_PARAM)"""
-        payload: dict[str, Any] = {}
-        payload['slot'] = slot
-        payload['key'] = key
-        payload['value'] = value
-        await self.send_json_cmd('CMD_CTRL_SLOT_SET_PARAM', payload)
-
-    async def cmd_ctrl_slot_status(self, slot: int) -> None:
-        """Get status of a control slot. (CMD_CTRL_SLOT_STATUS)"""
-        payload: dict[str, Any] = {}
-        payload['slot'] = slot
-        await self.send_json_cmd('CMD_CTRL_SLOT_STATUS', payload)
-
-    async def cmd_ctrl_signal_define(self, id: int, name: str, kind: str, initial: float = 0.0) -> None:
+    async def cmd_ctrl_signal_define(self, id: int, name: str, signal_kind: str, initial: float = 0.0) -> None:
         """Define a new signal in the signal bus. Only allowed when IDLE. (CMD_CTRL_SIGNAL_DEFINE)"""
         payload: dict[str, Any] = {}
         payload['id'] = id
         payload['name'] = name
-        payload['kind'] = kind
+        payload['signal_kind'] = signal_kind
         payload['initial'] = initial
         await self.send_json_cmd('CMD_CTRL_SIGNAL_DEFINE', payload)
 
@@ -139,6 +99,65 @@ class RobotCommandsMixin:
         """List all defined signals in the signal bus. (CMD_CTRL_SIGNALS_LIST)"""
         payload: dict[str, Any] = {}
         await self.send_json_cmd('CMD_CTRL_SIGNALS_LIST', payload)
+
+    async def cmd_ctrl_slot_config(self, slot: int, controller_type: str, rate_hz: int = 100, ref_id: Optional[int] = None, meas_id: Optional[int] = None, out_id: Optional[int] = None, num_states: int = 2, num_inputs: int = 1, state_ids: Optional[Any] = None, ref_ids: Optional[Any] = None, output_ids: Optional[Any] = None, require_armed: bool = True, require_active: bool = True) -> None:
+        """Configure a control slot with controller type and signal routing. Only allowed when IDLE. (CMD_CTRL_SLOT_CONFIG)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['controller_type'] = controller_type
+        payload['rate_hz'] = rate_hz
+        if ref_id is not None:
+            payload['ref_id'] = ref_id
+        if meas_id is not None:
+            payload['meas_id'] = meas_id
+        if out_id is not None:
+            payload['out_id'] = out_id
+        payload['num_states'] = num_states
+        payload['num_inputs'] = num_inputs
+        if state_ids is not None:
+            payload['state_ids'] = state_ids
+        if ref_ids is not None:
+            payload['ref_ids'] = ref_ids
+        if output_ids is not None:
+            payload['output_ids'] = output_ids
+        payload['require_armed'] = require_armed
+        payload['require_active'] = require_active
+        await self.send_json_cmd('CMD_CTRL_SLOT_CONFIG', payload)
+
+    async def cmd_ctrl_slot_enable(self, slot: int, enable: bool) -> None:
+        """Enable or disable a configured control slot. (CMD_CTRL_SLOT_ENABLE)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['enable'] = enable
+        await self.send_json_cmd('CMD_CTRL_SLOT_ENABLE', payload)
+
+    async def cmd_ctrl_slot_reset(self, slot: int) -> None:
+        """Reset a control slot's internal state (integrators, etc). (CMD_CTRL_SLOT_RESET)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        await self.send_json_cmd('CMD_CTRL_SLOT_RESET', payload)
+
+    async def cmd_ctrl_slot_set_param(self, slot: int, key: str, value: float) -> None:
+        """Set a scalar parameter on a control slot's controller. (CMD_CTRL_SLOT_SET_PARAM)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['key'] = key
+        payload['value'] = value
+        await self.send_json_cmd('CMD_CTRL_SLOT_SET_PARAM', payload)
+
+    async def cmd_ctrl_slot_set_param_array(self, slot: int, key: str, values: Any) -> None:
+        """Set an array parameter on a control slot (e.g., gain matrix K for state-space). (CMD_CTRL_SLOT_SET_PARAM_ARRAY)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['key'] = key
+        payload['values'] = values
+        await self.send_json_cmd('CMD_CTRL_SLOT_SET_PARAM_ARRAY', payload)
+
+    async def cmd_ctrl_slot_status(self, slot: int) -> None:
+        """Get status of a control slot. (CMD_CTRL_SLOT_STATUS)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        await self.send_json_cmd('CMD_CTRL_SLOT_STATUS', payload)
 
     async def cmd_set_mode(self, mode: str) -> None:
         """Set the high-level robot mode. Prefer ARM/ACTIVATE/DISARM/DEACTIVATE. (CMD_SET_MODE)"""
