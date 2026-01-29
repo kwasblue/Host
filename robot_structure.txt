@@ -1,7 +1,7 @@
 ================================================================================
 📂 PROJECT STRUCTURE
-Generated: 2026-01-27 21:23:32
-Total Files: 94
+Generated: 2026-01-28 08:26:25
+Total Files: 97
 ================================================================================
 
 📄 boot_strap_structure.py
@@ -361,6 +361,9 @@ Total Files: 94
    ⚙️  def done_callback(self, f)
    ⚙️  def main()
 
+📄 robot_host/runners/replay_to_metrics.py
+   ⚙️  def main()
+
 📄 robot_host/runners/run_camera.py
    🧱 class DummyModel
       └── def __call__(self, x)
@@ -374,6 +377,26 @@ Total Files: 94
    ⚙️  def main()
 
 📄 robot_host/runners/run_detection.py
+   ⚙️  def main()
+
+📄 robot_host/runners/run_latency_benchmarks.py
+   ⚙️  def main()
+
+📄 robot_host/runners/send_all_commands.py
+   🧱 class CmdResult
+      (no methods)
+   ⚙️  def parse_hostport(self, s)
+   ⚙️  def load_payloads(self, path)
+   ⚙️  def ensure_artifacts_dir()
+   ⚙️  def _import_class(self, dotted)
+   ⚙️  def _module_name_from_file(self, pkg_root, py_file, pkg_name)
+   ⚙️  def _discover_transport_via_ast(self, pkg_name, token_sets, exclude_dirs)
+   ⚙️  def _resolve_transport_class(self, explicit, mode)
+   ⚙️  def _construct_transport(self, TransportCls)
+   ⚙️  def ack_is_ok(self, ack)
+   ⚙️  def should_skip_cmd(self, cmd)
+   ⚙️  def build_argparser()
+   ⚙️  def filter_commands(self, cmds, only, skip)
    ⚙️  def main()
 
 📄 robot_host/runners/serial_interactive_shell.py
@@ -680,7 +703,7 @@ Total Files: 94
 ================================================================================
 📊 STATISTICS
 ================================================================================
-Total Classes:    85
-Total Functions:  155
+Total Classes:    86
+Total Functions:  170
 Total Methods:    217
 ================================================================================

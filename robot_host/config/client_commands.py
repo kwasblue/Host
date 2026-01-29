@@ -50,6 +50,96 @@ class RobotCommandsMixin:
         payload: dict[str, Any] = {}
         await self.send_json_cmd('CMD_STOP', payload)
 
+    async def cmd_get_rates(self) -> None:
+        """Get current loop rates (ctrl, safety, telem) in Hz. (CMD_GET_RATES)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_GET_RATES', payload)
+
+    async def cmd_ctrl_set_rate(self, hz: int) -> None:
+        """Set control loop rate in Hz. Only allowed when IDLE. (CMD_CTRL_SET_RATE)"""
+        payload: dict[str, Any] = {}
+        payload['hz'] = hz
+        await self.send_json_cmd('CMD_CTRL_SET_RATE', payload)
+
+    async def cmd_safety_set_rate(self, hz: int) -> None:
+        """Set safety loop rate in Hz. Only allowed when IDLE. (CMD_SAFETY_SET_RATE)"""
+        payload: dict[str, Any] = {}
+        payload['hz'] = hz
+        await self.send_json_cmd('CMD_SAFETY_SET_RATE', payload)
+
+    async def cmd_telem_set_rate(self, hz: int) -> None:
+        """Set telemetry loop rate in Hz. Only allowed when IDLE. (CMD_TELEM_SET_RATE)"""
+        payload: dict[str, Any] = {}
+        payload['hz'] = hz
+        await self.send_json_cmd('CMD_TELEM_SET_RATE', payload)
+
+    async def cmd_ctrl_slot_config(self, slot: int, type: str, ref_id: int, meas_id: int, out_id: int, rate_hz: int = 100, require_armed: bool = True, require_active: bool = True) -> None:
+        """Configure a control slot with controller type and signal routing. Only allowed when IDLE. (CMD_CTRL_SLOT_CONFIG)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['type'] = type
+        payload['ref_id'] = ref_id
+        payload['meas_id'] = meas_id
+        payload['out_id'] = out_id
+        payload['rate_hz'] = rate_hz
+        payload['require_armed'] = require_armed
+        payload['require_active'] = require_active
+        await self.send_json_cmd('CMD_CTRL_SLOT_CONFIG', payload)
+
+    async def cmd_ctrl_slot_enable(self, slot: int, enable: bool) -> None:
+        """Enable or disable a configured control slot. (CMD_CTRL_SLOT_ENABLE)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['enable'] = enable
+        await self.send_json_cmd('CMD_CTRL_SLOT_ENABLE', payload)
+
+    async def cmd_ctrl_slot_reset(self, slot: int) -> None:
+        """Reset a control slot's internal state (integrators, etc). (CMD_CTRL_SLOT_RESET)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        await self.send_json_cmd('CMD_CTRL_SLOT_RESET', payload)
+
+    async def cmd_ctrl_slot_set_param(self, slot: int, key: str, value: float) -> None:
+        """Set a parameter on a control slot's controller. (CMD_CTRL_SLOT_SET_PARAM)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['key'] = key
+        payload['value'] = value
+        await self.send_json_cmd('CMD_CTRL_SLOT_SET_PARAM', payload)
+
+    async def cmd_ctrl_slot_status(self, slot: int) -> None:
+        """Get status of a control slot. (CMD_CTRL_SLOT_STATUS)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        await self.send_json_cmd('CMD_CTRL_SLOT_STATUS', payload)
+
+    async def cmd_ctrl_signal_define(self, id: int, name: str, kind: str, initial: float = 0.0) -> None:
+        """Define a new signal in the signal bus. Only allowed when IDLE. (CMD_CTRL_SIGNAL_DEFINE)"""
+        payload: dict[str, Any] = {}
+        payload['id'] = id
+        payload['name'] = name
+        payload['kind'] = kind
+        payload['initial'] = initial
+        await self.send_json_cmd('CMD_CTRL_SIGNAL_DEFINE', payload)
+
+    async def cmd_ctrl_signal_set(self, id: int, value: float) -> None:
+        """Set a signal value in the signal bus. (CMD_CTRL_SIGNAL_SET)"""
+        payload: dict[str, Any] = {}
+        payload['id'] = id
+        payload['value'] = value
+        await self.send_json_cmd('CMD_CTRL_SIGNAL_SET', payload)
+
+    async def cmd_ctrl_signal_get(self, id: int) -> None:
+        """Get a signal value from the signal bus. (CMD_CTRL_SIGNAL_GET)"""
+        payload: dict[str, Any] = {}
+        payload['id'] = id
+        await self.send_json_cmd('CMD_CTRL_SIGNAL_GET', payload)
+
+    async def cmd_ctrl_signals_list(self) -> None:
+        """List all defined signals in the signal bus. (CMD_CTRL_SIGNALS_LIST)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_CTRL_SIGNALS_LIST', payload)
+
     async def cmd_set_mode(self, mode: str) -> None:
         """Set the high-level robot mode. Prefer ARM/ACTIVATE/DISARM/DEACTIVATE. (CMD_SET_MODE)"""
         payload: dict[str, Any] = {}

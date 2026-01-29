@@ -105,6 +105,266 @@ COMMANDS: dict[str, dict] = {
     },
 
     # ----------------------------------------------------------------------
+    # Loop Rates
+    # ----------------------------------------------------------------------
+    "CMD_GET_RATES": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Get current loop rates (ctrl, safety, telem) in Hz.",
+        "payload": {},
+    },
+
+    "CMD_CTRL_SET_RATE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set control loop rate in Hz. Only allowed when IDLE.",
+        "payload": {
+            "hz": {
+                "type": "int",
+                "required": True,
+                "min": 5,
+                "max": 200,
+                "description": "Control loop frequency in Hz.",
+            },
+        },
+    },
+
+    "CMD_SAFETY_SET_RATE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set safety loop rate in Hz. Only allowed when IDLE.",
+        "payload": {
+            "hz": {
+                "type": "int",
+                "required": True,
+                "min": 20,
+                "max": 500,
+                "description": "Safety loop frequency in Hz.",
+            },
+        },
+    },
+
+    "CMD_TELEM_SET_RATE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set telemetry loop rate in Hz. Only allowed when IDLE.",
+        "payload": {
+            "hz": {
+                "type": "int",
+                "required": True,
+                "min": 1,
+                "max": 50,
+                "description": "Telemetry loop frequency in Hz.",
+            },
+        },
+    },
+
+    # ----------------------------------------------------------------------
+    # Control Kernel - Slot Configuration
+    # ----------------------------------------------------------------------
+    "CMD_CTRL_SLOT_CONFIG": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Configure a control slot with controller type and signal routing. Only allowed when IDLE.",
+        "payload": {
+            "slot": {
+                "type": "int",
+                "required": True,
+                "min": 0,
+                "max": 7,
+                "description": "Slot index (0-7).",
+            },
+            "type": {
+                "type": "string",
+                "required": True,
+                "enum": ["PID", "SS"],
+                "description": "Controller type: PID or StateSpace.",
+            },
+            "rate_hz": {
+                "type": "int",
+                "required": False,
+                "default": 100,
+                "min": 1,
+                "max": 1000,
+                "description": "Controller update rate in Hz.",
+            },
+            "ref_id": {
+                "type": "int",
+                "required": True,
+                "description": "Signal ID for reference/setpoint.",
+            },
+            "meas_id": {
+                "type": "int",
+                "required": True,
+                "description": "Signal ID for measurement/feedback.",
+            },
+            "out_id": {
+                "type": "int",
+                "required": True,
+                "description": "Signal ID for control output.",
+            },
+            "require_armed": {
+                "type": "bool",
+                "required": False,
+                "default": True,
+                "description": "Only run when robot is armed.",
+            },
+            "require_active": {
+                "type": "bool",
+                "required": False,
+                "default": True,
+                "description": "Only run when robot is active.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SLOT_ENABLE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Enable or disable a configured control slot.",
+        "payload": {
+            "slot": {
+                "type": "int",
+                "required": True,
+                "min": 0,
+                "max": 7,
+                "description": "Slot index (0-7).",
+            },
+            "enable": {
+                "type": "bool",
+                "required": True,
+                "description": "True to enable, False to disable.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SLOT_RESET": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Reset a control slot's internal state (integrators, etc).",
+        "payload": {
+            "slot": {
+                "type": "int",
+                "required": True,
+                "min": 0,
+                "max": 7,
+                "description": "Slot index (0-7).",
+            },
+        },
+    },
+
+    "CMD_CTRL_SLOT_SET_PARAM": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set a parameter on a control slot's controller.",
+        "payload": {
+            "slot": {
+                "type": "int",
+                "required": True,
+                "min": 0,
+                "max": 7,
+                "description": "Slot index (0-7).",
+            },
+            "key": {
+                "type": "string",
+                "required": True,
+                "description": "Parameter name (e.g., 'kp', 'ki', 'kd', 'out_min', 'out_max').",
+            },
+            "value": {
+                "type": "float",
+                "required": True,
+                "description": "Parameter value.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SLOT_STATUS": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Get status of a control slot.",
+        "payload": {
+            "slot": {
+                "type": "int",
+                "required": True,
+                "min": 0,
+                "max": 7,
+                "description": "Slot index (0-7).",
+            },
+        },
+    },
+
+    # ----------------------------------------------------------------------
+    # Control Kernel - Signal Bus
+    # ----------------------------------------------------------------------
+    "CMD_CTRL_SIGNAL_DEFINE": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Define a new signal in the signal bus. Only allowed when IDLE.",
+        "payload": {
+            "id": {
+                "type": "int",
+                "required": True,
+                "description": "Unique signal ID.",
+            },
+            "name": {
+                "type": "string",
+                "required": True,
+                "description": "Human-readable signal name.",
+            },
+            "kind": {
+                "type": "string",
+                "required": True,
+                "enum": ["REF", "MEAS", "OUT"],
+                "description": "Signal kind: REF (setpoint), MEAS (measurement), OUT (output).",
+            },
+            "initial": {
+                "type": "float",
+                "required": False,
+                "default": 0.0,
+                "description": "Initial value.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SIGNAL_SET": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Set a signal value in the signal bus.",
+        "payload": {
+            "id": {
+                "type": "int",
+                "required": True,
+                "description": "Signal ID.",
+            },
+            "value": {
+                "type": "float",
+                "required": True,
+                "description": "Value to set.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SIGNAL_GET": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Get a signal value from the signal bus.",
+        "payload": {
+            "id": {
+                "type": "int",
+                "required": True,
+                "description": "Signal ID.",
+            },
+        },
+    },
+
+    "CMD_CTRL_SIGNALS_LIST": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "List all defined signals in the signal bus.",
+        "payload": {},
+    },
+
+    # ----------------------------------------------------------------------
     # Robot Core (Legacy - consider deprecating SET_MODE)
     # ----------------------------------------------------------------------
     "CMD_SET_MODE": {

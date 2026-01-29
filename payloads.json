@@ -1,0 +1,67 @@
+{
+  "CMD_GPIO_REGISTER_CHANNEL": { "channel": 0, "pin": 2, "mode": "output" },
+  "CMD_GPIO_WRITE": { "channel": 0, "value": 1 },
+  "CMD_GPIO_TOGGLE": { "channel": 0 },
+  "CMD_GPIO_READ": { "channel": 0 },
+
+  "CMD_SET_MODE": { "mode": "IDLE" },
+
+  "CMD_ULTRASONIC_ATTACH": { "sensor_id": 0 },
+  "CMD_ULTRASONIC_READ": { "sensor_id": 0 },
+
+  "CMD_DC_SET_SPEED": { "motor_id": 0, "speed": 0.1 },
+  "CMD_DC_SET_VEL_TARGET": { "motor_id": 0, "omega": 0.1 },
+  "CMD_DC_STOP": { "motor_id": 0 },
+  "CMD_DC_VEL_PID_ENABLE": { "motor_id": 0, "enable": true },
+  "CMD_DC_SET_VEL_GAINS": { "motor_id": 0, "kp": 1.0, "ki": 0.1, "kd": 0.01 },
+
+  "CMD_SET_VEL": { "vx": 0.0, "omega": 0.0 },
+
+  "CMD_SERVO_ATTACH": { "servo_id": 0, "channel": 0, "min_us": 1000, "max_us": 2000 },
+  "CMD_SERVO_SET_ANGLE": { "servo_id": 0, "angle_deg": 90 },
+  "CMD_SERVO_DETACH": { "servo_id": 0 },
+
+  "CMD_STEPPER_ENABLE": { "motor_id": 0, "enable": true },
+  "CMD_STEPPER_MOVE_REL": { "motor_id": 0, "steps": 50, "speed_steps_s": 1000.0 },
+  "CMD_STEPPER_STOP": { "motor_id": 0 },
+
+  "CMD_ENCODER_ATTACH": { "encoder_id": 0, "pin_a": 32, "pin_b": 33 },
+  "CMD_ENCODER_READ": { "encoder_id": 0 },
+  "CMD_ENCODER_RESET": { "encoder_id": 0 },
+
+  "CMD_PWM_SET": { "channel": 0, "duty": 0.5, "freq_hz": 1000.0 },
+
+  "CMD_TELEM_SET_INTERVAL": { "interval_ms": 100 },
+  "CMD_SET_LOG_LEVEL": { "level": "info" },
+
+  "CMD_GET_RATES": {},
+  "CMD_CTRL_SET_RATE": { "hz": 100 },
+  "CMD_SAFETY_SET_RATE": { "hz": 100 },
+  "CMD_TELEM_SET_RATE": { "hz": 10 },
+
+"CMD_CTRL_SIGNAL_DEFINE": [
+    { "id": 100, "name": "ref_w0",  "signal_kind": "REF",  "initial": 0.0 },
+    { "id": 200, "name": "meas_w0", "signal_kind": "MEAS", "initial": 0.0 },
+    { "id": 300, "name": "out_w0",  "signal_kind": "OUT",  "initial": 0.0 }
+],
+
+"CMD_CTRL_SLOT_CONFIG": {
+    "slot": 0,
+    "controller_type": "PID",    
+    "rate_hz": 100,
+    "ref_id": 100,
+    "meas_id": 200,
+    "out_id": 300,
+    "require_armed": true,
+    "require_active": true
+},
+
+  "CMD_CTRL_SLOT_ENABLE": { "slot": 0, "enable": true },
+  "CMD_CTRL_SLOT_RESET": { "slot": 0 },
+  "CMD_CTRL_SLOT_SET_PARAM": { "slot": 0, "key": "kp", "value": 1.0 },
+  "CMD_CTRL_SLOT_STATUS": { "slot": 0 },
+
+  "CMD_CTRL_SIGNAL_SET": { "id": 100, "value": 0.0 },
+  "CMD_CTRL_SIGNAL_GET": { "id": 100 },
+  "CMD_CTRL_SIGNALS_LIST": {}
+}

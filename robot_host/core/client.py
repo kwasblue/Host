@@ -352,16 +352,15 @@ class BaseAsyncRobotClient:
             self.bus.publish("json_error", {"error": str(e), "raw": payload})
             return
 
-        # ✅ ADD THIS BLOCK RIGHT HERE
         kind = obj.get("kind", "")
 
         # --- Identity handshake ---
         if kind == "identity":
             self.bus.publish("identity", obj)
             if self._handshake_future and not self._handshake_future.done():
-                self._cached_identity = obj
-            else:
                 self._handshake_future.set_result(obj)
+            else:
+                self._cached_identity = obj
             return
 
         type_str = obj.get("type", "")
@@ -379,7 +378,9 @@ class BaseAsyncRobotClient:
             return
 
         # --- Command ACKs ---
-        if cmd_str and cmd_str.endswith("_ACK"):
+        # FIX: MCU sends "cmd": "CMD_HEARTBEAT", not "CMD_HEARTBEAT_ACK"
+        # Check for "ok" field and "src": "mcu" to identify ACKs
+        if cmd_str and obj.get("src") == "mcu" and "ok" in obj:
             seq = obj.get("seq", -1)
             ok = obj.get("ok", False)
             error = obj.get("error")
@@ -397,7 +398,6 @@ class BaseAsyncRobotClient:
 
         # Fallback
         self.bus.publish("json", obj)
-
     # ---------- Outgoing commands ----------
 
     def _next_seq(self) -> int:
