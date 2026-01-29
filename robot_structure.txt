@@ -1,7 +1,7 @@
 ================================================================================
 📂 PROJECT STRUCTURE
-Generated: 2026-01-28 08:26:25
-Total Files: 97
+Generated: 2026-01-29 10:58:08
+Total Files: 98
 ================================================================================
 
 📄 boot_strap_structure.py
@@ -385,6 +385,8 @@ Total Files: 97
 📄 robot_host/runners/send_all_commands.py
    🧱 class CmdResult
       (no methods)
+   🧱 class RunContext
+      (no methods)
    ⚙️  def parse_hostport(self, s)
    ⚙️  def load_payloads(self, path)
    ⚙️  def ensure_artifacts_dir()
@@ -393,10 +395,18 @@ Total Files: 97
    ⚙️  def _discover_transport_via_ast(self, pkg_name, token_sets, exclude_dirs)
    ⚙️  def _resolve_transport_class(self, explicit, mode)
    ⚙️  def _construct_transport(self, TransportCls)
+   ⚙️  def _send_reliable_supports_timeout(self, client)
    ⚙️  def ack_is_ok(self, ack)
    ⚙️  def should_skip_cmd(self, cmd)
    ⚙️  def build_argparser()
-   ⚙️  def filter_commands(self, cmds, only, skip)
+   ⚙️  def get_command_category(self, cmd)
+   ⚙️  def filter_commands(self, cmds, only, skip, category)
+   ⚙️  def list_commands()
+   ⚙️  def reorder_state_machine_aware(self, cmds)
+   ⚙️  def _allowed_motion_cmd(self, c)
+   ⚙️  def _payload_items(self, spec)
+   ⚙️  def _per_cmd_timeout(self, args, cmd)
+   ⚙️  def _extra_delay_ms(self, args, cmd)
    ⚙️  def main()
 
 📄 robot_host/runners/serial_interactive_shell.py
@@ -558,11 +568,17 @@ Total Files: 97
    ⚙️  def transport()
    ⚙️  def pytest_addoption(self, parser)
    ⚙️  def pytest_configure(self, config)
+   ⚙️  def pytest_collection_modifyitems(self, config, items)
+   ⚙️  def robot_host(self, request)
+   ⚙️  def robot_port(self, request)
+   ⚙️  def hil_timeout(self, request)
+   ⚙️  def hil(self, robot)
+   🧱 class HIL
+      └── def __init__(self, r)
+   ⚙️  def event_loop()
    ⚙️  def attach_bus_dump(self, client, path, cycle)
    ⚙️  def _ser(self, x)
    ⚙️  def log(self, topic, obj)
-   ⚙️  def close()
-   ⚙️  def event_loop()
 
 📄 tests/fakes/fake_async_transport.py
    🧱 class FakeAsyncTransport
@@ -654,6 +670,36 @@ Total Files: 97
    ⚙️  def _on_lost(self, _evt)
    ⚙️  def _pending_size()
 
+📄 tests/test_hil_send_commands.py
+   🧱 class TestSafety
+      (no methods)
+   🧱 class TestRates
+      (no methods)
+   🧱 class TestControlSignals
+      (no methods)
+   🧱 class TestControlSlots
+      (no methods)
+   🧱 class TestGPIO
+      (no methods)
+   🧱 class TestPWM
+      (no methods)
+   🧱 class TestLED
+      (no methods)
+   🧱 class TestServo
+      (no methods)
+   🧱 class TestStepper
+      (no methods)
+   🧱 class TestEncoder
+      (no methods)
+   🧱 class TestDCMotor
+      (no methods)
+   🧱 class TestMotion
+      (no methods)
+   🧱 class TestTelemetry
+      (no methods)
+   🧱 class TestLogging
+      (no methods)
+
 📄 tests/test_hil_smoke.py
    ⚙️  def _get_mcu_port(self, request)
 
@@ -703,7 +749,7 @@ Total Files: 97
 ================================================================================
 📊 STATISTICS
 ================================================================================
-Total Classes:    86
-Total Functions:  170
-Total Methods:    217
+Total Classes:    102
+Total Functions:  182
+Total Methods:    218
 ================================================================================
