@@ -320,6 +320,54 @@ class RobotCommandsMixin:
         payload['motor_id'] = motor_id
         await self.send_json_cmd('CMD_DC_STOP', payload)
 
+    async def cmd_observer_config(self, slot: int, num_states: int, num_outputs: int, input_ids: Any, output_ids: Any, estimate_ids: Any, num_inputs: int = 1, rate_hz: int = 200) -> None:
+        """Configure a Luenberger state observer. (CMD_OBSERVER_CONFIG)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['num_states'] = num_states
+        payload['num_outputs'] = num_outputs
+        payload['input_ids'] = input_ids
+        payload['output_ids'] = output_ids
+        payload['estimate_ids'] = estimate_ids
+        payload['num_inputs'] = num_inputs
+        payload['rate_hz'] = rate_hz
+        await self.send_json_cmd('CMD_OBSERVER_CONFIG', payload)
+
+    async def cmd_observer_enable(self, slot: int, enable: bool) -> None:
+        """Enable or disable a configured observer. (CMD_OBSERVER_ENABLE)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['enable'] = enable
+        await self.send_json_cmd('CMD_OBSERVER_ENABLE', payload)
+
+    async def cmd_observer_reset(self, slot: int) -> None:
+        """Reset observer state estimate to zero. (CMD_OBSERVER_RESET)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        await self.send_json_cmd('CMD_OBSERVER_RESET', payload)
+
+    async def cmd_observer_set_param(self, slot: int, key: str, value: float) -> None:
+        """Set individual matrix element (e.g., 'A01', 'L10'). (CMD_OBSERVER_SET_PARAM)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['key'] = key
+        payload['value'] = value
+        await self.send_json_cmd('CMD_OBSERVER_SET_PARAM', payload)
+
+    async def cmd_observer_set_param_array(self, slot: int, key: str, values: Any) -> None:
+        """Set full matrix (A, B, C, or L) in row-major order. (CMD_OBSERVER_SET_PARAM_ARRAY)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['key'] = key
+        payload['values'] = values
+        await self.send_json_cmd('CMD_OBSERVER_SET_PARAM_ARRAY', payload)
+
+    async def cmd_observer_status(self, slot: int) -> None:
+        """Get observer status and current state estimates. (CMD_OBSERVER_STATUS)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        await self.send_json_cmd('CMD_OBSERVER_STATUS', payload)
+
     async def cmd_dc_vel_pid_enable(self, motor_id: int, enable: bool) -> None:
         """Enable or disable closed-loop velocity PID control for a DC motor. (CMD_DC_VEL_PID_ENABLE)"""
         payload: dict[str, Any] = {}

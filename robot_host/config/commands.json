@@ -733,6 +733,171 @@
         }
       }
     },
+    "CMD_OBSERVER_CONFIG": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Configure a Luenberger state observer.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 3,
+          "description": "Observer slot index (0-3)."
+        },
+        "num_states": {
+          "type": "int",
+          "required": true,
+          "min": 1,
+          "max": 6,
+          "description": "Number of states to estimate."
+        },
+        "num_inputs": {
+          "type": "int",
+          "required": false,
+          "default": 1,
+          "min": 1,
+          "max": 2,
+          "description": "Number of control inputs (u)."
+        },
+        "num_outputs": {
+          "type": "int",
+          "required": true,
+          "min": 1,
+          "max": 4,
+          "description": "Number of measurements (y)."
+        },
+        "rate_hz": {
+          "type": "int",
+          "required": false,
+          "default": 200,
+          "min": 50,
+          "max": 1000,
+          "description": "Observer update rate in Hz."
+        },
+        "input_ids": {
+          "type": "array",
+          "items": {
+            "type": "int"
+          },
+          "required": true,
+          "description": "Signal IDs for control inputs (u)."
+        },
+        "output_ids": {
+          "type": "array",
+          "items": {
+            "type": "int"
+          },
+          "required": true,
+          "description": "Signal IDs for measurements (y)."
+        },
+        "estimate_ids": {
+          "type": "array",
+          "items": {
+            "type": "int"
+          },
+          "required": true,
+          "description": "Signal IDs where state estimates (x\u0302) are written."
+        }
+      }
+    },
+    "CMD_OBSERVER_ENABLE": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Enable or disable a configured observer.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 3
+        },
+        "enable": {
+          "type": "bool",
+          "required": true
+        }
+      }
+    },
+    "CMD_OBSERVER_RESET": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Reset observer state estimate to zero.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 3
+        }
+      }
+    },
+    "CMD_OBSERVER_SET_PARAM": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set individual matrix element (e.g., 'A01', 'L10').",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 3
+        },
+        "key": {
+          "type": "string",
+          "required": true,
+          "description": "Matrix element: 'Aij', 'Bij', 'Cij', or 'Lij' (i=row, j=col)."
+        },
+        "value": {
+          "type": "float",
+          "required": true
+        }
+      }
+    },
+    "CMD_OBSERVER_SET_PARAM_ARRAY": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Set full matrix (A, B, C, or L) in row-major order.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 3
+        },
+        "key": {
+          "type": "string",
+          "required": true,
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "L"
+          ],
+          "description": "Matrix name."
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "float"
+          },
+          "required": true,
+          "description": "Matrix values in row-major order."
+        }
+      }
+    },
+    "CMD_OBSERVER_STATUS": {
+      "kind": "cmd",
+      "direction": "host->mcu",
+      "description": "Get observer status and current state estimates.",
+      "payload": {
+        "slot": {
+          "type": "int",
+          "required": true,
+          "min": 0,
+          "max": 3
+        }
+      }
+    },
     "CMD_DC_VEL_PID_ENABLE": {
       "kind": "cmd",
       "direction": "host->mcu",
