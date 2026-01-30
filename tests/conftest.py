@@ -10,6 +10,7 @@ from pathlib import Path
 import asyncio
 from typing import Optional
 
+
 # ============== Existing Fixtures ==============
 
 @pytest.fixture
@@ -138,6 +139,11 @@ def hil(robot):
         def __init__(self, r):
             self.robot = r
         
+        async def send(self, cmd, payload=None):
+            """Send command and return response."""
+            ok, err = await self.robot.send_reliable(cmd, payload or {})
+            return {"ok": ok, "error": err}
+        
         async def assert_ok(self, cmd, payload=None, msg=""):
             ok, err = await self.robot.send_reliable(cmd, payload or {})
             assert ok, f"{cmd} failed: {err}. {msg}"
@@ -149,8 +155,34 @@ def hil(robot):
             if expected_error:
                 assert expected_error in str(err)
             return ok, err
+        
+        async def clear_signals(self):
+            """Clear all signals from the signal bus."""
+            try:
+                resp = await self.send("CMD_CTRL_SIGNALS_LIST", {})
+                if resp and resp.get("ok"):
+                    # Get signals from response - adjust based on actual response format
+                    ok, err = await self.robot.send_reliable("CMD_CTRL_SIGNALS_LIST", {})
+                    # For now just try to delete common test IDs
+                    for sig_id in [100, 101, 102, 110, 200, 201, 202, 203, 300, 301, 302, 303, 310, 311]:
+                        try:
+                            await self.robot.send_reliable("CMD_CTRL_SIGNAL_DELETE", {"id": sig_id})
+                        except:
+                            pass
+            except Exception:
+                pass
     
     return HIL(robot)
+
+
+# ============== Clear Signals Fixture ==============
+
+@pytest.fixture
+async def clear_signals(hil):
+    """Fixture to clear signals - use in test classes that need it."""
+    await hil.clear_signals()
+    yield
+    await hil.clear_signals()
 
 
 # ============== Event Loop ==============

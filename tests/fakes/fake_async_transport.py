@@ -29,25 +29,25 @@ class FakeAsyncTransport:
                 await self._auto_ack_json_cmd(data)
 
     async def _auto_ack_json_cmd(self, frame_data: bytes) -> None:
-        """Parse sent command and inject an ACK response."""
         try:
-            # Extract payload from frame: [HEADER][len_hi][len_lo][msg_type][payload...][checksum]
             length = (frame_data[1] << 8) | frame_data[2]
-            payload = frame_data[4:4 + length - 1]  # -1 for msg_type
-            cmd = json.loads(payload.decode("utf-8"))
-            
-            cmd_type = cmd.get("type", "")
-            seq = cmd.get("seq", 0)
-            
-            # Build ACK
+            payload = frame_data[4:4 + length - 1]
+            msg = json.loads(payload.decode("utf-8"))
+
+            cmd_name = msg.get("cmd") or msg.get("type") or ""
+            seq = msg.get("seq", 0)
+
             ack = {
-                "cmd": cmd_type.replace("CMD_", "") + "_ACK",
+                "src": "mcu",
+                "cmd": cmd_name,   
                 "seq": seq,
                 "ok": True,
             }
             await self._inject_json_from_mcu(ack)
-        except Exception:
-            pass
+        except Exception as e:
+            # DON'T swallow while debugging
+            print(f"[FakeAsyncTransport] auto-ack failed: {e}")
+
 
     def _inject_body(self, body: bytes) -> None:
         """Inject raw body (msg_type + payload) into handler."""

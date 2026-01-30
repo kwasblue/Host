@@ -82,6 +82,11 @@ class RobotCommandsMixin:
         payload['initial'] = initial
         await self.send_json_cmd('CMD_CTRL_SIGNAL_DEFINE', payload)
 
+    async def cmd_ctrl_signals_clear(self) -> None:
+        """Clear all signals from the signal bus. (CMD_CTRL_SIGNALS_CLEAR)"""
+        payload: dict[str, Any] = {}
+        await self.send_json_cmd('CMD_CTRL_SIGNALS_CLEAR', payload)
+
     async def cmd_ctrl_signal_set(self, id: int, value: float) -> None:
         """Set a signal value in the signal bus. (CMD_CTRL_SIGNAL_SET)"""
         payload: dict[str, Any] = {}
@@ -99,6 +104,13 @@ class RobotCommandsMixin:
         """List all defined signals in the signal bus. (CMD_CTRL_SIGNALS_LIST)"""
         payload: dict[str, Any] = {}
         await self.send_json_cmd('CMD_CTRL_SIGNALS_LIST', payload)
+
+    async def cmd_ctrl_signal_delete(self, id: Optional[Any] = None) -> None:
+        """Delete a signal from the signal bus. (CMD_CTRL_SIGNAL_DELETE)"""
+        payload: dict[str, Any] = {}
+        if id is not None:
+            payload['id'] = id
+        await self.send_json_cmd('CMD_CTRL_SIGNAL_DELETE', payload)
 
     async def cmd_ctrl_slot_config(self, slot: int, controller_type: str, rate_hz: int = 100, ref_id: Optional[int] = None, meas_id: Optional[int] = None, out_id: Optional[int] = None, num_states: int = 2, num_inputs: int = 1, state_ids: Optional[Any] = None, ref_ids: Optional[Any] = None, output_ids: Optional[Any] = None, require_armed: bool = True, require_active: bool = True) -> None:
         """Configure a control slot with controller type and signal routing. Only allowed when IDLE. (CMD_CTRL_SLOT_CONFIG)"""

@@ -180,8 +180,8 @@ COMMANDS: dict[str, dict] = {
             "signal_kind": {
                 "type": "string",
                 "required": True,
-                "enum": ["REF", "MEAS", "OUT"],
-                "description": "Signal kind: REF (setpoint), MEAS (measurement), OUT (output).",
+                "enum": ["REF", "MEAS", "OUT", "EST"],
+                "description": "Signal kind: REF = reference/setpoint, MEAS = measurement/feedback, OUT = control output, EST = state estimate.",
             },
             "initial": {
                 "type": "float",
@@ -190,6 +190,13 @@ COMMANDS: dict[str, dict] = {
                 "description": "Initial value.",
             },
         },
+    },
+    
+    "CMD_CTRL_SIGNALS_CLEAR": {
+    "kind": "cmd",
+    "direction": "host->mcu",
+    "description": "Clear all signals from the signal bus.",
+    "payload": {},
     },
 
     "CMD_CTRL_SIGNAL_SET": {
@@ -229,7 +236,14 @@ COMMANDS: dict[str, dict] = {
         "description": "List all defined signals in the signal bus.",
         "payload": {},
     },
-
+    "CMD_CTRL_SIGNAL_DELETE": {
+    "kind": "cmd",
+    "direction": "host->mcu",
+    "description": "Delete a signal from the signal bus.",
+    "payload": {
+        "id": {"type": "integer", "description": "Signal ID to delete"}
+    },
+    },
     # ----------------------------------------------------------------------
     # Control Kernel - Slot Configuration
     # ----------------------------------------------------------------------

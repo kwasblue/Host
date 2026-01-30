@@ -41,6 +41,8 @@ class TestRates:
 
 
 class TestControlSignals:
+
+    
     async def test_define_signal(self, hil):
         await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
             "id": 100, "name": "test_ref", "signal_kind": "REF", "initial": 0.0
@@ -59,8 +61,14 @@ class TestControlSignals:
 
 class TestControlSlots:
     @pytest.fixture
+    async def setup(self, hil):
+        await hil.clear_signals()
+        yield
+    
+    @pytest.fixture
     async def slot(self, hil):
         """Configure slot 0 with signals."""
+        # Define signals first
         for sig in [
             {"id": 200, "name": "s_ref", "signal_kind": "REF", "initial": 0.0},
             {"id": 201, "name": "s_meas", "signal_kind": "MEAS", "initial": 0.0},
@@ -68,11 +76,17 @@ class TestControlSlots:
         ]:
             await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", sig)
         
+        # Configure slot
         await hil.assert_ok("CMD_CTRL_SLOT_CONFIG", {
-            "slot": 0, "controller_type": "PID", "rate_hz": 100,
-            "ref_id": 200, "meas_id": 201, "out_id": 202,
+            "slot": 0,
+            "controller_type": "PID",
+            "rate_hz": 100,
+            "ref_id": 200,
+            "meas_id": 201,
+            "out_id": 202,
         })
-        return 0
+        
+        return 0 
 
     async def test_slot_enable(self, hil, slot):
         await hil.assert_ok("CMD_CTRL_SLOT_ENABLE", {"slot": slot, "enable": True})
@@ -162,3 +176,380 @@ class TestTelemetry:
 class TestLogging:
     async def test_set_log_level(self, hil):
         await hil.assert_ok("CMD_SET_LOG_LEVEL", {"level": "info"})
+
+# ------------------------------------------------------------------------------
+# Observer Tests
+# ------------------------------------------------------------------------------
+
+class TestObserver:
+    """Test observer configuration and operation."""
+        
+    async def setup(self, hil):
+        await hil.clear_signals()
+        yield
+    
+    @pytest.fixture
+    async def observer_signals(self, hil):
+        """Define signals needed for observer testing."""
+        # Control input signal
+        await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+            "id": 100, "name": "motor_cmd", "signal_kind": "OUT", "initial": 0.0
+        })
+        # Measurement signal
+        await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+            "id": 101, "name": "theta_meas", "signal_kind": "MEAS", "initial": 0.0
+        })
+        # Estimate signals
+        await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+            "id": 200, "name": "theta_est", "signal_kind": "MEAS", "initial": 0.0
+        })
+        await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+            "id": 201, "name": "omega_est", "signal_kind": "MEAS", "initial": 0.0
+        })
+        return [100, 101, 200, 201]
+
+    async def test_observer_config(self, hil, observer_signals):
+        """Test observer configuration."""
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 200,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+
+    async def test_observer_set_matrices(self, hil, observer_signals):
+        """Test setting observer matrices."""
+        # Configure first
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 200,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+        
+        # Set A matrix (2x2): [[0, 1], [0, -10]]
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0,
+            "key": "A",
+            "values": [0, 1, 0, -10]
+        })
+        
+        # Set B matrix (2x1): [[0], [50]]
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0,
+            "key": "B",
+            "values": [0, 50]
+        })
+        
+        # Set C matrix (1x2): [[1, 0]]
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0,
+            "key": "C",
+            "values": [1, 0]
+        })
+        
+        # Set L matrix (2x1): [[50], [500]]
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0,
+            "key": "L",
+            "values": [50, 500]
+        })
+
+    async def test_observer_set_param_individual(self, hil, observer_signals):
+        """Test setting individual matrix elements."""
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 200,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+        
+        # Set A[0][1] = 1.0
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM", {
+            "slot": 0,
+            "key": "A01",
+            "value": 1.0
+        })
+        
+        # Set L[1][0] = 100.0
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM", {
+            "slot": 0,
+            "key": "L10",
+            "value": 100.0
+        })
+
+    async def test_observer_enable_disable(self, hil, observer_signals):
+        """Test enabling and disabling observer."""
+        # Configure first
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 200,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+        
+        # Enable
+        await hil.assert_ok("CMD_OBSERVER_ENABLE", {"slot": 0, "enable": True})
+        
+        # Disable
+        await hil.assert_ok("CMD_OBSERVER_ENABLE", {"slot": 0, "enable": False})
+
+    async def test_observer_reset(self, hil, observer_signals):
+        """Test resetting observer state."""
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 200,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+        
+        await hil.assert_ok("CMD_OBSERVER_RESET", {"slot": 0})
+
+    async def test_observer_status(self, hil, observer_signals):
+        """Test getting observer status."""
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 200,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+        
+        await hil.assert_ok("CMD_OBSERVER_STATUS", {"slot": 0})
+
+    async def test_observer_full_setup(self, hil, observer_signals):
+        """Test complete observer setup for DC motor velocity estimation."""
+        # Configure
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 500,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+        
+        # Set all matrices for a DC motor model
+        # dθ/dt = ω
+        # dω/dt = -10*ω + 50*u
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "A", "values": [0, 1, 0, -10]
+        })
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "B", "values": [0, 50]
+        })
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "C", "values": [1, 0]
+        })
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "L", "values": [100, 500]
+        })
+        
+        # Enable
+        await hil.assert_ok("CMD_OBSERVER_ENABLE", {"slot": 0, "enable": True})
+        
+        # Check status
+        await hil.assert_ok("CMD_OBSERVER_STATUS", {"slot": 0})
+
+    async def test_observer_enable_fails_without_config(self, hil):
+        """Test that enabling unconfigured observer fails."""
+        # Try to enable slot 3 which isn't configured
+        await hil.assert_fails("CMD_OBSERVER_ENABLE", {
+            "slot": 3,
+            "enable": True
+        })
+
+    async def test_observer_with_controller(self, hil, observer_signals):
+        """Test observer feeding a PID controller."""
+        # Configure observer
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 2,
+            "num_inputs": 1,
+            "num_outputs": 1,
+            "rate_hz": 500,
+            "input_ids": [100],
+            "output_ids": [101],
+            "estimate_ids": [200, 201]
+        })
+        
+        # Set matrices
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "A", "values": [0, 1, 0, -10]
+        })
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "B", "values": [0, 50]
+        })
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "C", "values": [1, 0]
+        })
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {
+            "slot": 0, "key": "L", "values": [100, 500]
+        })
+        
+        # Enable observer
+        await hil.assert_ok("CMD_OBSERVER_ENABLE", {"slot": 0, "enable": True})
+        
+        # Define reference signal
+        await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+            "id": 300, "name": "omega_ref", "signal_kind": "REF", "initial": 0.0
+        })
+        
+        # Configure PID to use observer's velocity estimate (signal 201)
+        await hil.assert_ok("CMD_CTRL_SLOT_CONFIG", {
+            "slot": 0,
+            "controller_type": "PID",
+            "rate_hz": 200,
+            "ref_id": 300,      # Velocity setpoint
+            "meas_id": 201,     # Observer's velocity estimate!
+            "out_id": 100,      # Motor command
+        })
+        
+        # Set PID gains
+        await hil.assert_ok("CMD_CTRL_SLOT_SET_PARAM", {"slot": 0, "key": "kp", "value": 0.5})
+        await hil.assert_ok("CMD_CTRL_SLOT_SET_PARAM", {"slot": 0, "key": "ki", "value": 1.0})
+        await hil.assert_ok("CMD_CTRL_SLOT_SET_PARAM", {"slot": 0, "key": "kd", "value": 0.01})
+        
+        # Enable controller
+        await hil.assert_ok("CMD_CTRL_SLOT_ENABLE", {"slot": 0, "enable": True})
+        
+        # Check both are running
+        await hil.assert_ok("CMD_OBSERVER_STATUS", {"slot": 0})
+        await hil.assert_ok("CMD_CTRL_SLOT_STATUS", {"slot": 0})
+
+
+class TestObserverStateSpace:
+    """Test observer with state-space controller (full state feedback)."""
+    
+    async def setup(self, hil):
+        await hil.clear_signals()
+        yield
+    
+    @pytest.fixture
+    async def pendulum_signals(self, hil):
+        """Define signals for inverted pendulum."""
+        signals = [
+            # Control output
+            (100, "force_cmd", "OUT"),
+            # Measurements
+            (101, "theta_meas", "MEAS"),
+            (102, "x_meas", "MEAS"),
+            # Estimates
+            (200, "theta_est", "MEAS"),
+            (201, "theta_dot_est", "MEAS"),
+            (202, "x_est", "MEAS"),
+            (203, "x_dot_est", "MEAS"),
+            # References
+            (300, "theta_ref", "REF"),
+            (301, "theta_dot_ref", "REF"),
+            (302, "x_ref", "REF"),
+            (303, "x_dot_ref", "REF"),
+        ]
+        
+        for id, name, kind in signals:
+            await hil.assert_ok("CMD_CTRL_SIGNAL_DEFINE", {
+                "id": id, "name": name, "signal_kind": kind, "initial": 0.0
+            })
+        
+        return signals
+
+    async def test_pendulum_observer_config(self, hil, pendulum_signals):
+        """Test 4-state observer configuration."""
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 4,
+            "num_inputs": 1,
+            "num_outputs": 2,
+            "rate_hz": 500,
+            "input_ids": [100],
+            "output_ids": [101, 102],
+            "estimate_ids": [200, 201, 202, 203]
+        })
+
+    async def test_pendulum_full_system(self, hil, pendulum_signals):
+        """Test complete inverted pendulum control system."""
+        # Configure observer
+        await hil.assert_ok("CMD_OBSERVER_CONFIG", {
+            "slot": 0,
+            "num_states": 4,
+            "num_inputs": 1,
+            "num_outputs": 2,
+            "rate_hz": 500,
+            "input_ids": [100],
+            "output_ids": [101, 102],
+            "estimate_ids": [200, 201, 202, 203]
+        })
+        
+        # Linearized pendulum model (simplified)
+        # States: [θ, θ̇, x, ẋ]
+        A = [
+            0, 1, 0, 0,
+            25, 0, 0, 0,   # g/L ≈ 25 for L=0.4m
+            0, 0, 0, 1,
+            -2.5, 0, 0, 0  # -m*g/(M) simplified
+        ]
+        B = [0, -2.5, 0, 1]  # Simplified
+        C = [
+            1, 0, 0, 0,  # Measure theta
+            0, 0, 1, 0   # Measure x
+        ]
+        L = [
+            40, 0,
+            400, 0,
+            0, 50,
+            0, 600
+        ]
+        
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {"slot": 0, "key": "A", "values": A})
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {"slot": 0, "key": "B", "values": B})
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {"slot": 0, "key": "C", "values": C})
+        await hil.assert_ok("CMD_OBSERVER_SET_PARAM_ARRAY", {"slot": 0, "key": "L", "values": L})
+        
+        await hil.assert_ok("CMD_OBSERVER_ENABLE", {"slot": 0, "enable": True})
+        
+        # Configure state-space controller
+        await hil.assert_ok("CMD_CTRL_SLOT_CONFIG", {
+            "slot": 0,
+            "controller_type": "STATE_SPACE",
+            "rate_hz": 200,
+            "num_states": 4,
+            "num_inputs": 1,
+            "state_ids": [200, 201, 202, 203],  # Use observer estimates
+            "ref_ids": [300, 301, 302, 303],
+            "output_ids": [100],
+        })
+        
+        # LQR gains (example values)
+        K = [-100, -20, 10, 15]
+        await hil.assert_ok("CMD_CTRL_SLOT_SET_PARAM_ARRAY", {"slot": 0, "key": "K", "values": K})
+        
+        await hil.assert_ok("CMD_CTRL_SLOT_ENABLE", {"slot": 0, "enable": True})
+        
+        # Verify both running
+        await hil.assert_ok("CMD_OBSERVER_STATUS", {"slot": 0})
+        await hil.assert_ok("CMD_CTRL_SLOT_STATUS", {"slot": 0})
