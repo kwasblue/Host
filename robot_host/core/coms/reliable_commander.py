@@ -96,7 +96,7 @@ class ReliableCommander:
             (success, error_msg) if wait_for_ack else (True, None)
         """
         payload = payload or {}
-
+        payload["wantAck"] = wait_for_ack
         sent_ns = time.monotonic_ns()
         seq = await self.send_func(cmd_type, payload, None)
 
@@ -142,7 +142,8 @@ class ReliableCommander:
         payload: Optional[Dict[str, Any]] = None,
     ) -> int:
         """Send without tracking. Use for heartbeats etc."""
-        payload = payload or {}
+        payload = dict(payload or {})
+        payload["wantAck"] = False
         sent_ns = time.monotonic_ns()
         seq = await self.send_func(cmd_type, payload, None)
         self.commands_sent += 1
@@ -197,34 +198,6 @@ class ReliableCommander:
                 pass
             self._update_task = None
 
-    def pending_count(self) -> int:
-        return len(self._pending)
-
-    def clear_pending(self) -> None:
-        """Clear all pending commands (e.g., on disconnect)."""
-        n = len(self._pending)
-        for cmd in list(self._pending.values()):
-            self._emit(
-                "cmd.cleared",
-                seq=cmd.seq,
-                cmd_type=cmd.cmd_type,
-                retries=cmd.retries,
-                first_sent_ns=cmd.first_sent_ns,
-                last_sent_ns=cmd.last_sent_ns,
-            )
-            if cmd.future and not cmd.future.done():
-                cmd.future.set_result((False, "CLEARED"))
-        self._pending.clear()
-        self._emit("cmd.cleared_batch", count=n)
-
-    def stats(self) -> Dict[str, int]:
-        return {
-            "commands_sent": self.commands_sent,
-            "acks_received": self.acks_received,
-            "timeouts": self.timeouts,
-            "retries": self.retries,
-            "pending": self.pending_count(),
-        }
 
     # ---------------- Internals ----------------
 

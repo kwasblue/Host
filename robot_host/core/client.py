@@ -468,6 +468,19 @@ class BaseAsyncRobotClient:
             (success, error_msg)
         """
         return await self.commander.send(type_str, payload, wait_for_ack)
+    
+    async def send_stream(self, cmd_type: str, payload: dict, request_ack: bool = False):
+        """
+        Streaming-friendly send:
+        - request_ack=False: fire-and-forget (fast, no pending tracking)
+        - request_ack=True: reliable send (tracked + retries)
+        """
+        if request_ack:
+            return await self.send_reliable(cmd_type, payload, wait_for_ack=True)
+
+        # fastest path for high-rate streaming
+        await self.commander.send_fire_and_forget(cmd_type, payload)
+        return True, None
 
     # ---------- Convenience methods ----------
 
