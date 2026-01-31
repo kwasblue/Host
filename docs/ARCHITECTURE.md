@@ -1,8 +1,12 @@
-# Robot Host Architecture
+# MARA Host Architecture
+
+**Modular Asynchronous Robotics Architecture - Python Host Component**
+
+---
 
 ## Overview
 
-The robot_host library follows a layered, async-first architecture for controlling ESP32-based robots.
+The MARA Host library (`robot_host`) follows a layered, async-first architecture for controlling ESP32-based robots. This is the Python component of the MARA framework.
 
 ## Layer Diagram
 

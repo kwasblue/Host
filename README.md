@@ -1,8 +1,34 @@
-# Robot Host
+# MARA Host
 
-A comprehensive Python library for controlling ESP32-based robots. Provides transport abstraction, command handling, telemetry processing, and research tools for robotics development.
+```
+ ███╗   ███╗ █████╗ ██████╗  █████╗
+ ████╗ ████║██╔══██╗██╔══██╗██╔══██╗
+ ██╔████╔██║███████║██████╔╝███████║
+ ██║╚██╔╝██║██╔══██║██╔══██╗██╔══██║
+ ██║ ╚═╝ ██║██║  ██║██║  ██║██║  ██║
+ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+ Modular Asynchronous Robotics Architecture
+```
 
-## Features
+**Python Host Component**
+
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+## Overview
+
+**MARA** (Modular Asynchronous Robotics Architecture) is a complete robotics control framework consisting of:
+
+| Component | Repository | Description |
+|-----------|------------|-------------|
+| **Firmware** | [`ESP32 MCU Host`](../PlatformIO/Projects/ESP32%20MCU%20Host) | Real-time motor control, sensor fusion, communication |
+| **Host** | `robot_host` (this repo) | Python async client, telemetry, research tools |
+
+This repository contains the **Python host library** - a comprehensive async framework for controlling ESP32-based robots. Provides transport abstraction, command handling, telemetry processing, and research tools for robotics development.
+
+## Key Features
 
 - **Transport Layer**: Serial (USB), TCP (WiFi), Bluetooth Classic
 - **Async Client**: Non-blocking robot control with reliable command delivery
@@ -93,6 +119,28 @@ client.bus.subscribe("telemetry.imu", on_imu)
 # Or use TelemetryHostModule for structured data
 telemetry = TelemetryHostModule(client.bus)
 # Access latest: telemetry.latest
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      User Application                            │
+├─────────────────────────────────────────────────────────────────┤
+│                     AsyncRobotClient                             │
+├─────────────┬─────────────┬─────────────┬─────────────┬─────────┤
+│  Transport  │  Command    │  Telemetry  │  Modules    │ Research │
+│  Layer      │  Layer      │  Layer      │             │          │
+├─────────────┼─────────────┼─────────────┼─────────────┼─────────┤
+│ Serial      │ Reliable    │ Parser      │ Motion      │ Simulate │
+│ TCP         │ Commander   │ Models      │ GPIO        │ SysID    │
+│ Bluetooth   │ Connection  │ HostModule  │ Encoder     │ Metrics  │
+│             │ Monitor     │ FileLogger  │ IMU         │ Analysis │
+├─────────────┴─────────────┴─────────────┴─────────────┴─────────┤
+│                         EventBus                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                      Protocol (framing)                          │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Directory Structure
@@ -327,28 +375,6 @@ simulation:
   dt: 0.01                # seconds
 ```
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      User Application                            │
-├─────────────────────────────────────────────────────────────────┤
-│                     AsyncRobotClient                             │
-├─────────────┬─────────────┬─────────────┬─────────────┬─────────┤
-│  Transport  │  Command    │  Telemetry  │  Modules    │ Research │
-│  Layer      │  Layer      │  Layer      │             │          │
-├─────────────┼─────────────┼─────────────┼─────────────┼─────────┤
-│ Serial      │ Reliable    │ Parser      │ Motion      │ Simulate │
-│ TCP         │ Commander   │ Models      │ GPIO        │ SysID    │
-│ Bluetooth   │ Connection  │ HostModule  │ Encoder     │ Metrics  │
-│             │ Monitor     │ FileLogger  │ IMU         │ Analysis │
-├─────────────┴─────────────┴─────────────┴─────────────┴─────────┤
-│                         EventBus                                 │
-├─────────────────────────────────────────────────────────────────┤
-│                      Protocol (framing)                          │
-└─────────────────────────────────────────────────────────────────┘
-```
-
 ## Performance
 
 | Metric | Value |
@@ -358,9 +384,9 @@ simulation:
 | Frame parsing | O(n) optimized |
 | Memory stable | Bounded queues |
 
-## ESP32 Firmware
+## MARA Firmware
 
-This library is designed to work with the [ESP32 MCU Host](../PlatformIO/Projects/ESP32%20MCU%20Host) firmware.
+This library is designed to work with the [MARA Firmware](../PlatformIO/Projects/ESP32%20MCU%20Host) for ESP32.
 
 ## License
 

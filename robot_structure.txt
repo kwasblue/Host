@@ -1,7 +1,7 @@
 ================================================================================
 📂 PROJECT STRUCTURE
-Generated: 2026-01-30 18:36:30
-Total Files: 100
+Generated: 2026-01-31 08:56:26
+Total Files: 124
 ================================================================================
 
 📄 boot_strap_structure.py
@@ -9,6 +9,56 @@ Total Files: 100
    ⚙️  def ensure_init(self, path)
    ⚙️  def write_if_missing(self, path, content)
    ⚙️  def main()
+
+📄 examples/01_serial_connection.py
+   ⚙️  def find_serial_ports()
+
+📄 examples/02_tcp_connection.py
+   ⚙️  def on_telemetry(self, data)
+
+📄 examples/03_command_basics.py
+   ⚙️  def create_transport(self, arg)
+
+📄 examples/04_telemetry_stream.py
+   ⚙️  def create_transport(self, arg)
+   🧱 class TelemetryStats
+      (no methods)
+   ⚙️  def on_imu(self, imu_data)
+   ⚙️  def on_encoder(self, enc_data)
+   ⚙️  def on_motor(self, motor_data)
+   ⚙️  def on_ultrasonic(self, us_data)
+   ⚙️  def on_telemetry_raw(self, data)
+
+📄 examples/05_gpio_control.py
+   ⚙️  def create_transport(self, arg)
+   ⚙️  def on_gpio_ack(self, data)
+
+📄 examples/06_motor_control.py
+   ⚙️  def create_transport(self, arg)
+
+📄 examples/07_encoder_feedback.py
+   ⚙️  def create_transport(self, arg)
+   🧱 class EncoderState
+      (no methods)
+   ⚙️  def on_encoder_telemetry(self, data)
+
+📄 examples/08_session_recording.py
+   ⚙️  def create_transport(self, arg)
+
+📄 examples/09_full_robot_control.py
+   🧱 class RobotControlConfig
+      (no methods)
+   🧱 class RobotState
+      (no methods)
+   🧱 class RobotController
+      ├── def __init__(self, transport_arg, config)
+      ├── def _create_transport(self, arg)
+      └── def _setup_subscriptions(self)
+   ⚙️  def on_imu(self, data)
+   ⚙️  def on_encoder(self, data)
+   ⚙️  def on_motor(self, data)
+   ⚙️  def on_connection_lost(self, _)
+   ⚙️  def on_connection_restored(self, _)
 
 📄 file_directory_listing.py
    ⚙️  def list_all_files(self, root_path)
@@ -21,17 +71,17 @@ Total Files: 100
    ⚙️  def remove_pycache(self, root)
    ⚙️  def main()
 
-📄 robot_host/core/camera_client.py
-   🧱 class Esp32CamClient
-      ├── def __init__(self, base_url, timeout)
-      ├── def _fetch_raw_bgr(self)
-      ├── def get_frame(self, resize_to, blur_ksize)
-      ├── def get_frame_for_ml(self, target_size, normalize, to_chw)
-      ├── def get_dual_frame(self, display_size, ml_size, blur_ksize, normalize, to_chw)
-      ├── def iter_frames(self, delay)
-      └── def test_preview(self, window_name, delay)
+📄 robot_host/command/binary_commands.py
+   🧱 class Opcode
+      (no methods)
+   🧱 class BinaryStreamer
+      ├── def encode_set_vel(self, vx, omega)
+      ├── def encode_set_signal(self, signal_id, value)
+      ├── def encode_set_signals(self, signals)
+      ├── def encode_heartbeat(self)
+      └── def encode_stop(self)
 
-📄 robot_host/core/client.py
+📄 robot_host/command/client.py
    🧱 class HasSendBytes
       ├── def set_frame_handler(self, handler)
       ├── def start(self)
@@ -44,6 +94,7 @@ Total Files: 100
       ├── def _on_frame(self, body)
       ├── def _handle_json_payload(self, payload)
       ├── def _next_seq(self)
+      ├── def set_prefer_binary(self, prefer)
       ├── def is_connected(self)
       ├── def version_verified(self)
       ├── def firmware_version(self)
@@ -54,7 +105,7 @@ Total Files: 100
    🧱 class AsyncRobotClient
       (no methods)
 
-📄 robot_host/core/command_streamer.py
+📄 robot_host/command/command_streamer.py
    🧱 class StreamSpec
       (no methods)
    🧱 class CommandStreamer
@@ -65,7 +116,7 @@ Total Files: 100
       ├── def _pending_count(self)
       └── def _ttl_expired(self, spec)
 
-📄 robot_host/core/coms/connection_monitor.py
+📄 robot_host/command/coms/connection_monitor.py
    🧱 class ConnectionMonitor
       ├── def __init__(self, timeout_s, on_disconnect, on_reconnect)
       ├── def on_message_received(self)
@@ -74,7 +125,7 @@ Total Files: 100
       ├── def time_since_last_message(self)
       └── def reset(self)
 
-📄 robot_host/core/coms/reliable_commander.py
+📄 robot_host/command/coms/reliable_commander.py
    🧱 class CommandStatus
       (no methods)
    🧱 class PendingCommand
@@ -87,6 +138,36 @@ Total Files: 100
       ├── def clear_pending(self)
       └── def stats(self)
 
+📄 robot_host/command/json_to_binary.py
+   🧱 class JsonToBinaryEncoder
+      ├── def encode(self, cmd)
+      ├── def supports_binary(self, cmd_type)
+      ├── def _encode_set_vel(self, cmd)
+      ├── def _encode_set_signal(self, cmd)
+      ├── def _encode_heartbeat(self)
+      └── def _encode_stop(self)
+   🧱 class JsonToBinaryBatchEncoder
+      ├── def encode_signals(self, signals)
+      └── def encode_signal_cmds(self, cmds)
+
+📄 robot_host/config/feature_flags.py
+   ⚙️  def _env_bool(self, key, default)
+   🧱 class FeatureFlags
+      ├── def __post_init__(self)
+      ├── def from_env(self, cls)
+      ├── def minimal(self, cls)
+      ├── def motors(self, cls)
+      ├── def sensors(self, cls)
+      ├── def control(self, cls)
+      ├── def full(self, cls)
+      ├── def has_any_motor(self)
+      ├── def has_any_sensor(self)
+      ├── def has_any_transport(self)
+      ├── def has_any_control(self)
+      └── def summary(self)
+   ⚙️  def get_flags()
+   ⚙️  def set_flags(self, flags)
+
 📄 robot_host/core/event_bus.py
    🧱 class EventBus
       ├── def __init__(self)
@@ -96,9 +177,6 @@ Total Files: 100
 📄 robot_host/core/messages.py
    🧱 class MsgType
       (no methods)
-
-📄 robot_host/core/ml_preprocess.py
-   ⚙️  def preprocess_for_ml(self, frame_bgr, target_size, normalize, to_chw)
 
 📄 robot_host/core/protocol.py
    ⚙️  def encode(self, msg_type, payload)
@@ -117,6 +195,14 @@ Total Files: 100
       (no methods)
    🧱 class HostSettings
       └── def load(self, cls, profile)
+
+📄 robot_host/hw/gpio.py
+   🧱 class GpioHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/hw/pwm.py
+   🧱 class PwmHostModule
+      └── def __init__(self, bus, client)
 
 📄 robot_host/logger/logger.py
    🧱 class DedupFilter
@@ -141,7 +227,17 @@ Total Files: 100
       ├── def __init__(self, name, log_dir, level, console, max_bytes, backup_count, dedup_cooldown_s, jsonl_file, text_file)
       └── def close(self)
 
-📄 robot_host/modules/camera_module.py
+📄 robot_host/module/camera_client.py
+   🧱 class Esp32CamClient
+      ├── def __init__(self, base_url, timeout)
+      ├── def _fetch_raw_bgr(self)
+      ├── def get_frame(self, resize_to, blur_ksize)
+      ├── def get_frame_for_ml(self, target_size, normalize, to_chw)
+      ├── def get_dual_frame(self, display_size, ml_size, blur_ksize, normalize, to_chw)
+      ├── def iter_frames(self, delay)
+      └── def test_preview(self, window_name, delay)
+
+📄 robot_host/module/camera_module.py
    🧱 class CameraModule
       ├── def __init__(self, base_url, name, display_size, ml_size, blur_ksize, fps, show_preview, frame_callback)
       ├── def start(self)
@@ -150,25 +246,7 @@ Total Files: 100
       ├── def _window_name(self)
       └── def _run_loop(self)
 
-📄 robot_host/modules/encoder.py
-   🧱 class EncoderDefaults
-      (no methods)
-   🧱 class EncoderHostModule
-      └── def __init__(self, bus, client, defaults)
-
-📄 robot_host/modules/gpio.py
-   🧱 class GpioHostModule
-      └── def __init__(self, bus, client)
-
-📄 robot_host/modules/imu.py
-   🧱 class ImuState
-      (no methods)
-   🧱 class ImuHostModule
-      ├── def __init__(self, bus)
-      ├── def set_biases(self, accel_bias, gyro_bias)
-      └── def _on_imu_raw(self, msg)
-
-📄 robot_host/modules/inverse_kin_example.py
+📄 robot_host/module/inverse_kin_example.py
    🧱 class JointConfig
       (no methods)
    🧱 class LinkConfig
@@ -191,65 +269,149 @@ Total Files: 100
       ├── def _send_servo_move(self, channel, angle_deg)
       └── def _send_stepper_move_abs(self, joint, angle_deg)
 
-📄 robot_host/modules/logging_ctl.py
+📄 robot_host/module/logging_ctl.py
    🧱 class LoggingControlModule
       └── def __init__(self, bus, client)
 
-📄 robot_host/modules/modes.py
+📄 robot_host/module/ml_preprocess.py
+   ⚙️  def preprocess_for_ml(self, frame_bgr, target_size, normalize, to_chw)
+
+📄 robot_host/module/modes.py
    🧱 class ModeHostModule
       └── def __init__(self, bus, client)
 
-📄 robot_host/modules/motion.py
-   🧱 class MotionHostModule
-      └── def __init__(self, bus, client)
-
-📄 robot_host/modules/object_detection.py
+📄 robot_host/module/object_detection.py
    🧱 class Detection
       (no methods)
    🧱 class DetectionModule
       ├── def __init__(self, model, decode_fn, ml_size, class_names, score_thresh, use_torch, device, show_window, window_name, publish_fn)
       └── def handle_frame(self, display_frame, ml_frame, ts)
 
-📄 robot_host/modules/pill_test.py
+📄 robot_host/module/pill_test.py
    🧱 class PillCarouselConfig
       (no methods)
    🧱 class PillCarousel
       ├── def __init__(self, client, config)
       └── def set_current_slot(self, slot_index)
 
-📄 robot_host/modules/pwm.py
-   🧱 class PwmHostModule
-      └── def __init__(self, bus, client)
-
-📄 robot_host/modules/servo.py
-   🧱 class ServoHostModule
-      └── def __init__(self, bus, client)
-
-📄 robot_host/modules/stepper.py
-   🧱 class StepperHostModule
-      └── def __init__(self, bus, client)
-
-📄 robot_host/modules/telemetry_ctl.py
+📄 robot_host/module/telemetry_ctl.py
    🧱 class TelemetryControlModule
       └── def __init__(self, bus, client)
 
-📄 robot_host/modules/ultrasonic.py
-   🧱 class UltrasonicDefaults
-      (no methods)
-   🧱 class UltrasonicHostModule
-      ├── def __init__(self, bus, client, defaults, auto_subscribe)
-      └── def _on_telemetry_raw(self, msg)
-
-📄 robot_host/modules/yolo_decode.py
+📄 robot_host/module/yolo_decode.py
    ⚙️  def decode_yolo_output(self, raw, display_shape, ml_size)
 
-📄 robot_host/modules/yolo_detect.py
+📄 robot_host/module/yolo_detect.py
    🧱 class YoloWrapper
       ├── def __init__(self, weights)
       └── def __call__(self, x)
 
-📄 robot_host/research/bechmarks.py
+📄 robot_host/motor/motion.py
+   🧱 class MotionHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/motor/servo.py
+   🧱 class ServoHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/motor/stepper.py
+   🧱 class StepperHostModule
+      └── def __init__(self, bus, client)
+
+📄 robot_host/research/analysis.py
+   ⚙️  def load_session_df(self, jsonl_path)
+   ⚙️  def extract_telemetry_df(self, df, event_filter, flatten)
+   ⚙️  def lowpass_filter(self, data, cutoff_hz, sample_rate_hz, order)
+   ⚙️  def highpass_filter(self, data, cutoff_hz, sample_rate_hz, order)
+   ⚙️  def bandpass_filter(self, data, low_hz, high_hz, sample_rate_hz, order)
+   ⚙️  def moving_average(self, data, window)
+   ⚙️  def exponential_moving_average(self, data, alpha)
+   ⚙️  def median_filter(self, data, window)
+   ⚙️  def resample_uniform(self, times, values, target_rate_hz, method)
+   ⚙️  def fill_gaps(self, df, max_gap_s, method)
+   ⚙️  def cross_correlation(self, x, y, max_lag)
+   ⚙️  def find_lag(self, x, y, max_lag)
+   ⚙️  def autocorrelation(self, x, max_lag)
+   ⚙️  def correlation_matrix(self, df)
+   🧱 class SignalStats
+      └── def to_dict(self)
+   ⚙️  def compute_signal_stats(self, data)
+   ⚙️  def compute_rate(self, timestamps_s)
+   ⚙️  def segment_by_gaps(self, timestamps, gap_threshold_s)
+   ⚙️  def detect_outliers_zscore(self, data, threshold)
+   ⚙️  def detect_outliers_iqr(self, data, factor)
+   ⚙️  def detect_outliers_mad(self, data, threshold)
+   ⚙️  def remove_outliers(self, data, method)
+   ⚙️  def differentiate(self, times, values, smooth_window)
+   ⚙️  def integrate(self, times, values, method)
+   ⚙️  def compute_fft(self, data, sample_rate_hz)
+   ⚙️  def compute_psd(self, data, sample_rate_hz, nperseg)
+   ⚙️  def find_dominant_frequency(self, data, sample_rate_hz, min_freq_hz, max_freq_hz)
+
+📄 robot_host/research/benchmarks.py
    ⚙️  def run_benchmark(self, session_jsonl, out_json)
+
+📄 robot_host/research/config_loader.py
+   ⚙️  def load_yaml(self, path)
+   ⚙️  def load_json(self, path)
+   ⚙️  def load_config(self, path)
+   ⚙️  def save_yaml(self, data, path)
+   ⚙️  def save_json(self, data, path, indent)
+   ⚙️  def dict_to_dataclass(self, cls, data)
+   ⚙️  def dataclass_to_dict(self, obj)
+   ⚙️  def load_motor_config(self, data)
+   ⚙️  def load_noise_config(self, data)
+   ⚙️  def load_diff_drive_config(self, data)
+   ⚙️  def load_delay_config(self, data)
+   🧱 class RobotConfig
+      ├── def __init__(self, config_path)
+      ├── def create_robot(self)
+      ├── def create_simulation_runner(self, controller)
+      ├── def to_dict(self)
+      └── def save(self, path)
+   ⚙️  def load_robot(self, config_path)
+   ⚙️  def load_simulation(self, config_path, controller)
+   ⚙️  def create_default_config(self, name)
+   ⚙️  def generate_config_template(self, output_path)
+   ⚙️  def find_configs(self, directory, recursive)
+   ⚙️  def list_available_robots(self, config_dir)
+
+📄 robot_host/research/examples/01_basic_simulation.py
+   ⚙️  def main()
+
+📄 robot_host/research/examples/02_control_loop_analysis.py
+   🧱 class PIDController
+      ├── def __post_init__(self)
+      ├── def reset(self)
+      └── def update(self, setpoint, measured, dt)
+   ⚙️  def run_step_response_test(self, robot, pid, setpoint, duration, dt)
+   ⚙️  def main()
+
+📄 robot_host/research/examples/03_system_identification.py
+   ⚙️  def collect_motor_step_response(self, motor, voltage, duration, dt)
+   ⚙️  def main()
+
+📄 robot_host/research/examples/04_signal_analysis.py
+   ⚙️  def generate_noisy_signal(self, duration, sample_rate)
+   ⚙️  def main()
+
+📄 robot_host/research/examples/05_metrics_and_recording.py
+   ⚙️  def record_session(self, robot, session_name, duration, dt)
+   ⚙️  def main()
+
+📄 robot_host/research/examples/06_noise_comparison.py
+   ⚙️  def run_trajectory(self, robot, duration, dt)
+   ⚙️  def monte_carlo_trajectories(self, config, n_runs, duration, dt)
+   ⚙️  def main()
+
+📄 robot_host/research/examples/07_full_pipeline.py
+   🧱 class VelocityPID
+      ├── def __post_init__(self)
+      ├── def set_target(self, vx, omega)
+      ├── def update(self, state, dt)
+      └── def reset(self)
+   ⚙️  def generate_test_trajectory(self, t)
+   ⚙️  def main()
 
 📄 robot_host/research/experiments.py
    ⚙️  def _maybe_await(self, x)
@@ -262,15 +424,53 @@ Total Files: 100
 
 📄 robot_host/research/metrics.py
    ⚙️  def load_jsonl(self, path)
+   ⚙️  def filter_events(self, rows, event_prefix)
    ⚙️  def basic_metrics(self, jsonl_path)
+   🧱 class LatencyStats
+      └── def to_dict(self)
+   ⚙️  def compute_latency_stats(self, latencies_ms)
+   ⚙️  def command_ack_latency(self, rows)
+   ⚙️  def heartbeat_roundtrip(self, rows)
+   🧱 class JitterStats
+      └── def to_dict(self)
+   ⚙️  def compute_jitter(self, timestamps_ns)
+   ⚙️  def telemetry_jitter(self, rows, event)
+   🧱 class ThroughputStats
+      └── def to_dict(self)
+   ⚙️  def compute_throughput(self, rows, direction)
+   🧱 class ControlMetrics
+      └── def to_dict(self)
+   ⚙️  def compute_tracking_error(self, setpoints, actuals)
+   ⚙️  def analyze_step_response(self, times_s, values, setpoint, initial, settling_threshold)
+   ⚙️  def velocity_tracking_metrics(self, rows)
+   🧱 class ConnectionQuality
+      └── def to_dict(self)
+   ⚙️  def analyze_connection_quality(self, rows)
+   🧱 class SessionMetrics
+      └── def to_dict(self)
+   ⚙️  def analyze_session(self, jsonl_path)
+   ⚙️  def compare_sessions(self, paths)
 
-📄 robot_host/research/physics.py
-   🧱 class DiffDrivePhysics
-      ├── def __init__(self)
-      ├── def set_velocity(self, vx, omega)
-      ├── def step(self, dt)
-      ├── def imu(self)
-      └── def encoders(self)
+📄 robot_host/research/plotting.py
+   ⚙️  def apply_style()
+   ⚙️  def create_figure(self, rows, cols, figsize, sharex, sharey)
+   ⚙️  def plot_time_series(self, times, values, label, ax, title, xlabel, ylabel, color, alpha, linestyle)
+   ⚙️  def plot_multi_series(self, times, series, ax, title, xlabel, ylabel, colors)
+   ⚙️  def plot_telemetry_dashboard(self, df, columns, figsize, title)
+   ⚙️  def plot_setpoint_vs_actual(self, times, setpoint, actual, ax, title, ylabel, show_error)
+   ⚙️  def plot_control_loop(self, times, setpoint, actual, control_effort, figsize, title)
+   ⚙️  def plot_step_response(self, times, response, setpoint, metrics, ax, title)
+   ⚙️  def plot_trajectory_2d(self, x, y, ax, title, show_start_end, color_by_time)
+   ⚙️  def plot_pose_trajectory(self, x, y, theta, ax, arrow_spacing, title)
+   ⚙️  def plot_fft(self, data, sample_rate_hz, ax, title, max_freq_hz, log_scale)
+   ⚙️  def plot_psd(self, data, sample_rate_hz, ax, title, max_freq_hz)
+   ⚙️  def plot_bode(self, freqs, magnitude_db, phase_deg, figsize, title)
+   ⚙️  def plot_histogram(self, data, ax, title, xlabel, bins, show_stats)
+   ⚙️  def plot_latency_cdf(self, latencies_ms, ax, title, percentiles)
+   ⚙️  def plot_latency_stats(self, stats, ax, title)
+   ⚙️  def plot_imu_data(self, times, accel, gyro, figsize, title)
+   ⚙️  def save_figure(self, fig, path, dpi, tight)
+   ⚙️  def show()
 
 📄 robot_host/research/recording.py
    🧱 class RecordingConfig
@@ -293,6 +493,91 @@ Total Files: 100
       ├── def __init__(self, jsonl_path)
       ├── def _load(self, path)
       └── def to_dataframe(self)
+
+📄 robot_host/research/simulation.py
+   🧱 class GaussianNoise
+      ├── def sample(self)
+      └── def add_to(self, value)
+   🧱 class IMUNoiseModel
+      ├── def add_accel_noise(self, accel)
+      └── def add_gyro_noise(self, gyro, dt)
+   🧱 class EncoderNoiseModel
+      └── def quantize(self, angle_rad)
+   🧱 class UltrasonicNoiseModel
+      └── def add_noise(self, distance)
+   🧱 class DCMotorConfig
+      (no methods)
+   🧱 class DCMotor
+      ├── def __init__(self, config)
+      ├── def step(self, voltage, load_torque, dt)
+      └── def reset(self)
+   🧱 class DiffDriveConfig
+      (no methods)
+   🧱 class DiffDriveRobot
+      ├── def __init__(self, config, imu_noise, encoder_noise)
+      ├── def set_velocity(self, vx, omega)
+      ├── def set_motor_voltages(self, left_voltage, right_voltage, dt)
+      ├── def step(self, dt)
+      ├── def get_state(self)
+      ├── def get_imu_reading(self)
+      ├── def get_encoder_velocities(self)
+      └── def reset(self, x, y, theta)
+   🧱 class DelayConfig
+      (no methods)
+   🧱 class DelaySimulator
+      ├── def __init__(self, config)
+      ├── def send(self, message, current_time_s)
+      ├── def receive(self, current_time_s)
+      └── def clear(self)
+   🧱 class SimulationRunner
+      ├── def __init__(self, robot, controller, dt, delay_config)
+      ├── def step(self)
+      ├── def run(self, duration_s)
+      └── def reset(self)
+   🧱 class DiffDrivePhysics
+      ├── def __init__(self)
+      ├── def set_velocity(self, vx, omega)
+      ├── def step(self, dt)
+      ├── def imu(self)
+      ├── def encoders(self)
+      └── def get_state(self)
+
+📄 robot_host/research/sysid.py
+   🧱 class FirstOrderParams
+      ├── def transfer_function(self)
+      └── def to_dict(self)
+   🧱 class SecondOrderParams
+      ├── def fn_hz(self)
+      ├── def is_underdamped(self)
+      ├── def is_critically_damped(self)
+      ├── def is_overdamped(self)
+      ├── def transfer_function(self)
+      └── def to_dict(self)
+   🧱 class DCMotorParams
+      ├── def compute_derived(self)
+      └── def to_dict(self)
+   🧱 class DifferentialDriveParams
+      └── def to_dict(self)
+   ⚙️  def identify_first_order_step(self, times, response, input_amplitude, initial_value)
+   ⚙️  def identify_second_order_step(self, times, response, input_amplitude, initial_value)
+   ⚙️  def fit_step_response(self, times, response, order, input_amplitude)
+   ⚙️  def model(self, params)
+   ⚙️  def cost(self, params)
+   ⚙️  def model(self, params)
+   ⚙️  def cost(self, params)
+   ⚙️  def estimate_frequency_response(self, input_signal, output_signal, sample_rate_hz, nperseg)
+   ⚙️  def fit_transfer_function(self, freqs, magnitude_db, phase_deg, order)
+   ⚙️  def model(self, params)
+   ⚙️  def cost(self, params)
+   ⚙️  def model(self, params)
+   ⚙️  def cost(self, params)
+   ⚙️  def identify_dc_motor_step(self, times, voltage, velocity, current)
+   ⚙️  def identify_velocity_pid_plant(self, times, setpoint, velocity, pwm)
+   ⚙️  def identify_arx(self, u, y, na, nb, nk)
+   ⚙️  def identify_coulomb_friction(self, velocity, torque_or_current)
+   ⚙️  def identify_stribeck_friction(self, velocity, torque)
+   ⚙️  def model(self, params, v)
+   ⚙️  def cost(self, params)
 
 📄 robot_host/runners/bluetooth_shell.py
    ⚙️  def _print_event(self, tag)
@@ -444,6 +729,27 @@ Total Files: 100
    ⚙️  def on_stepper(self, step)
    ⚙️  def on_dc(self, dc)
 
+📄 robot_host/sensor/encoder.py
+   🧱 class EncoderDefaults
+      (no methods)
+   🧱 class EncoderHostModule
+      └── def __init__(self, bus, client, defaults)
+
+📄 robot_host/sensor/imu.py
+   🧱 class ImuState
+      (no methods)
+   🧱 class ImuHostModule
+      ├── def __init__(self, bus)
+      ├── def set_biases(self, accel_bias, gyro_bias)
+      └── def _on_imu_raw(self, msg)
+
+📄 robot_host/sensor/ultrasonic.py
+   🧱 class UltrasonicDefaults
+      (no methods)
+   🧱 class UltrasonicHostModule
+      ├── def __init__(self, bus, client, defaults, auto_subscribe)
+      └── def _on_telemetry_raw(self, msg)
+
 📄 robot_host/telemetry/binary_parser.py
    ⚙️  def _make_empty(self, ts_ms, raw_len, meta)
    ⚙️  def parse_telemetry_bin(self, payload)
@@ -474,6 +780,18 @@ Total Files: 100
    🧱 class StepperTelemetry
       (no methods)
    🧱 class DcMotorTelemetry
+      (no methods)
+   🧱 class SignalTelemetry
+      (no methods)
+   🧱 class ControlSignalsTelemetry
+      (no methods)
+   🧱 class ObserverTelemetry
+      (no methods)
+   🧱 class ControlObserversTelemetry
+      (no methods)
+   🧱 class ControlSlotTelemetry
+      (no methods)
+   🧱 class ControlSlotsTelemetry
       (no methods)
    🧱 class TelemetryPacket
       (no methods)
@@ -524,7 +842,7 @@ Total Files: 100
    ⚙️  def _load_pins(self, path)
    ⚙️  def validate_schema()
 
-📄 robot_host/transports/base_transport.py
+📄 robot_host/transport/base_transport.py
    🧱 class BaseTransport
       ├── def __init__(self)
       ├── def set_frame_handler(self, handler)
@@ -534,12 +852,12 @@ Total Files: 100
       ├── def stop(self)
       └── def _send_bytes(self, data)
 
-📄 robot_host/transports/bluetooth_transport.py
+📄 robot_host/transport/bluetooth_transport.py
    🧱 class BluetoothSerialTransport
       ├── def __init__(self, port, baudrate)
       └── def auto(self, cls, device_name, baudrate)
 
-📄 robot_host/transports/serial_transport.py
+📄 robot_host/transport/serial_transport.py
    🧱 class SerialTransport
       ├── def __init__(self, port, baudrate)
       ├── def _open(self)
@@ -547,7 +865,7 @@ Total Files: 100
       ├── def _read_raw(self, n)
       └── def _send_bytes(self, data)
 
-📄 robot_host/transports/stream_transport.py
+📄 robot_host/transport/stream_transport.py
    🧱 class StreamTransport
       ├── def __init__(self)
       ├── def _open(self)
@@ -560,7 +878,7 @@ Total Files: 100
       └── def _reader_loop(self)
    ⚙️  def _locked_send()
 
-📄 robot_host/transports/tcp_transport.py
+📄 robot_host/transport/tcp_transport.py
    🧱 class AsyncTcpTransport
       ├── def __init__(self, host, port, reconnect_delay)
       └── def set_frame_handler(self, handler)
@@ -723,6 +1041,22 @@ Total Files: 100
 📄 tests/test_identity_handshake.py
    ⚙️  def _import_client()
 
+📄 tests/test_json_to_binary.py
+   🧱 class TestJsonToBinaryEncoder
+      ├── def setup_method(self)
+      ├── def test_encode_set_vel(self)
+      ├── def test_encode_set_vel_defaults(self)
+      ├── def test_encode_set_signal(self)
+      ├── def test_encode_heartbeat(self)
+      ├── def test_encode_stop(self)
+      ├── def test_encode_unsupported_returns_none(self)
+      ├── def test_supports_binary(self)
+      └── def test_wire_size_comparison(self)
+   🧱 class TestJsonToBinaryBatchEncoder
+      ├── def setup_method(self)
+      ├── def test_encode_signals_batch(self)
+      └── def test_encode_signal_cmds(self)
+
 📄 tests/test_jsonl_logger.py
    ⚙️  def _import_jsonl_logger()
    ⚙️  def test_jsonl_logger_writes_valid_json_lines(self, tmp_path)
@@ -766,7 +1100,7 @@ Total Files: 100
 ================================================================================
 📊 STATISTICS
 ================================================================================
-Total Classes:    106
-Total Functions:  185
-Total Methods:    221
+Total Classes:    149
+Total Functions:  317
+Total Methods:    318
 ================================================================================

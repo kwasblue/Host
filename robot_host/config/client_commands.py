@@ -143,6 +143,13 @@ class RobotCommandsMixin:
         payload['enable'] = enable
         await self.send_json_cmd('CMD_CTRL_SLOT_ENABLE', payload)
 
+    async def cmd_ctrl_slot_get_param(self, slot: int, key: str) -> None:
+        """Get a scalar parameter from a control slot's controller. (CMD_CTRL_SLOT_GET_PARAM)"""
+        payload: dict[str, Any] = {}
+        payload['slot'] = slot
+        payload['key'] = key
+        await self.send_json_cmd('CMD_CTRL_SLOT_GET_PARAM', payload)
+
     async def cmd_ctrl_slot_reset(self, slot: int) -> None:
         """Reset a control slot's internal state (integrators, etc). (CMD_CTRL_SLOT_RESET)"""
         payload: dict[str, Any] = {}
