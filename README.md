@@ -33,6 +33,7 @@ This repository contains the **Python host library** - a comprehensive async fra
 - **Transport Layer**: Serial (USB), TCP (WiFi), Bluetooth Classic
 - **Async Client**: Non-blocking robot control with reliable command delivery
 - **Telemetry**: Real-time sensor data processing (IMU, encoders, motors)
+- **Control Design**: LQR, pole placement, observer design with scipy
 - **Research Tools**: Simulation, system identification, metrics analysis
 - **Recording/Replay**: Session recording for offline analysis
 
@@ -179,6 +180,11 @@ robot_host/
 ├── hw/              # Hardware modules
 │   ├── gpio.py            # GpioHostModule
 │   └── pwm.py
+├── control/         # Control design tools
+│   ├── state_space.py     # StateSpaceModel class
+│   ├── design.py          # LQR, pole placement, observer
+│   ├── upload.py          # MCU upload helpers
+│   └── examples.py        # Usage examples
 ├── research/        # Research & analysis tools
 │   ├── simulation.py      # Physics simulation
 │   ├── sysid.py           # System identification
@@ -253,6 +259,55 @@ print(f"Jitter: {metrics.jitter.jitter_ms:.2f} ms")
 ```
 
 See `robot_host/research/README.md` for detailed research module documentation.
+
+## Control Design Module
+
+Design state-space controllers and observers using scipy, then upload to the MCU.
+
+```python
+import numpy as np
+from robot_host.control import (
+    StateSpaceModel, lqr, observer_gains, configure_state_feedback
+)
+
+# Define system (mass-spring-damper)
+A = np.array([[0, 1], [-10, -0.5]])
+B = np.array([[0], [1]])
+C = np.array([[1, 0]])
+model = StateSpaceModel(A, B, C)
+
+# Check system properties
+print(f"Controllable: {model.is_controllable()}")
+print(f"Observable: {model.is_observable()}")
+print(f"Open-loop poles: {model.poles}")
+
+# Design LQR controller
+Q = np.diag([100, 1])  # State cost
+R = np.array([[1]])    # Control cost
+K, S, E = lqr(A, B, Q, R)
+print(f"LQR gain K: {K}")
+print(f"Closed-loop poles: {E}")
+
+# Design observer (faster than controller)
+L = observer_gains(A, C, poles=[-25, -30])
+
+# Upload to MCU
+result = await configure_state_feedback(
+    client, model, K,
+    L=L,
+    use_observer=True,
+    signals={
+        "state": [10, 11],
+        "ref": [12, 13],
+        "control": [20],
+        "measurement": [30],
+    },
+)
+```
+
+Run examples: `python -m robot_host.control.examples`
+
+See `docs/ADDING_COMMANDS.md` for full documentation.
 
 ## API Reference
 

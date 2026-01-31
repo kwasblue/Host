@@ -181,7 +181,7 @@ python -m pytest tests/test_hil_send_commands.py -v --run-hil
 |------------|---------|-------|------------------|
 | Native | `pio test -e native` | 37 | Protocol, EventBus, Safety, Handlers (on Mac) |
 | ESP32 On-Device | `pio test -e esp32_test` | 31 | Same tests on actual ESP32 (catches platform bugs) |
-| Python Host | `pytest tests/` | 56 | Client, encoders, protocol |
+| Python Host | `pytest tests/` | 80 | Client, encoders, protocol, control design |
 | HIL | `pytest --run-hil` | 46 | Full system over TCP to real ESP32 |
 
 ---

@@ -26,15 +26,15 @@ The MARA Host library (`robot_host`) follows a layered, async-first architecture
 │  │              (publish/subscribe messaging)             │      │
 │  └─────────────────────────┬─────────────────────────────┘      │
 │                            │                                     │
-│  ┌──────────┬──────────┬───┴───┬──────────┬──────────┐          │
-│  │ Command  │Telemetry │Module │ Research │Recording │          │
-│  │  Layer   │  Layer   │ Layer │  Tools   │  Tools   │          │
-│  ├──────────┼──────────┼───────┼──────────┼──────────┤          │
-│  │ Reliable │ Parser   │Motion │Simulation│Recording │          │
-│  │Commander │ Models   │GPIO   │ SysID    │ Replay   │          │
-│  │Connection│HostMod  │Encoder│ Metrics  │ Analysis │          │
-│  │ Monitor  │FileLog  │ IMU   │ Plotting │          │          │
-│  └──────────┴──────────┴───────┴──────────┴──────────┘          │
+│  ┌──────────┬──────────┬───┴───┬──────────┬──────────┬─────────┐│
+│  │ Command  │Telemetry │Module │ Control  │ Research │Recording││
+│  │  Layer   │  Layer   │ Layer │  Design  │  Tools   │  Tools  ││
+│  ├──────────┼──────────┼───────┼──────────┼──────────┼─────────┤│
+│  │ Reliable │ Parser   │Motion │StateSpace│Simulation│Recording││
+│  │Commander │ Models   │GPIO   │ LQR/PP   │ SysID    │ Replay  ││
+│  │Connection│HostMod  │Encoder│ Observer │ Metrics  │ Analysis││
+│  │ Monitor  │FileLog  │ IMU   │ Upload   │ Plotting │         ││
+│  └──────────┴──────────┴───────┴──────────┴──────────┴─────────┘│
 │                            │                                     │
 │  ┌─────────────────────────┴─────────────────────────────┐      │
 │  │                    Transport Layer                     │      │
@@ -204,6 +204,84 @@ def extract_frames(buffer, on_frame):
 
         # Parse frame...
 ```
+
+## Control Design Module
+
+Scipy-based tools for designing state-space controllers and observers.
+
+### Components
+
+```
+robot_host/control/
+├── state_space.py   # StateSpaceModel class, discretization
+├── design.py        # LQR, pole placement, observer gains
+├── upload.py        # MCU upload helpers
+└── examples.py      # Usage examples
+```
+
+### Design Workflow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Control Design Flow                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────────┐      ┌─────────────────┐               │
+│  │  StateSpaceModel │─────►│   lqr() / PP    │               │
+│  │  (A, B, C, D)    │      │  (gain design)  │               │
+│  └─────────────────┘      └────────┬────────┘               │
+│                                    │                         │
+│                                    ▼                         │
+│                           ┌─────────────────┐               │
+│                           │  check_stability │               │
+│                           │  (validation)    │               │
+│                           └────────┬────────┘               │
+│                                    │                         │
+│                                    ▼                         │
+│  ┌─────────────────┐      ┌─────────────────┐               │
+│  │   observer_gains │─────►│ configure_state │               │
+│  │   (L matrix)     │      │  _feedback()    │               │
+│  └─────────────────┘      └────────┬────────┘               │
+│                                    │                         │
+│                                    ▼                         │
+│                           ┌─────────────────┐               │
+│                           │  MCU Upload     │               │
+│                           │ (K, Kr, Ki, L)  │               │
+│                           └─────────────────┘               │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Example Usage
+
+```python
+from robot_host.control import (
+    StateSpaceModel, lqr, observer_gains, configure_state_feedback
+)
+import numpy as np
+
+# Define system
+A = np.array([[0, 1], [-10, -0.5]])
+B = np.array([[0], [1]])
+C = np.array([[1, 0]])
+model = StateSpaceModel(A, B, C)
+
+# Design LQR controller
+K, S, E = lqr(A, B, Q=np.diag([100, 1]), R=np.array([[1]]))
+
+# Design observer
+L = observer_gains(A, C, poles=[-25, -30])
+
+# Upload to MCU
+result = await configure_state_feedback(
+    client, model, K,
+    L=L,
+    use_observer=True,
+    signals={"state": [10, 11], "control": [20], "measurement": [30]},
+)
+```
+
+---
 
 ## Research Module
 
