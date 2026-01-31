@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from robot_host.modules.camera_module import CameraModule
-from robot_host.modules.object_detection import Detection, DetectionModule
+from robot_host.module.camera_module import CameraModule
+from robot_host.module.object_detection import Detection, DetectionModule
 
 # --- dummy model + decoder from above ---
 

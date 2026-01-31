@@ -1,6 +1,6 @@
 import asyncio
-from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.serial_transport import SerialTransport
+from robot_host.command.client import AsyncRobotClient
+from robot_host.transport.serial_transport import SerialTransport
 
 
 async def main():

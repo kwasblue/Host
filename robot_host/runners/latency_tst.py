@@ -4,10 +4,10 @@ import asyncio
 from statistics import mean
 
 from robot_host.core.event_bus import EventBus
-from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.tcp_transport import AsyncTcpTransport
-# from robot_host.transports.serial_transport import SerialTransport
-# from robot_host.transports.bluetooth_transport import BluetoothSerialTransport
+from robot_host.command.client import AsyncRobotClient
+from robot_host.transport.tcp_transport import AsyncTcpTransport
+# from robot_host.transport.serial_transport import SerialTransport
+# from robot_host.transport.bluetooth_transport import BluetoothSerialTransport
 
 
 class PingLatencyMeasurer:

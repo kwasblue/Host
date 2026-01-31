@@ -12,6 +12,12 @@ from .models import (
     EncoderTelemetry,
     StepperTelemetry,
     DcMotorTelemetry,
+    SignalTelemetry,
+    ControlSignalsTelemetry,
+    ObserverTelemetry,
+    ControlObserversTelemetry,
+    ControlSlotTelemetry,
+    ControlSlotsTelemetry,
 )
 
 # Section IDs (MUST match MCU registerBinProvider(section_id, ...))
@@ -21,6 +27,11 @@ TELEM_LIDAR       = 3
 TELEM_ENCODER0    = 4
 TELEM_STEPPER0    = 5
 TELEM_DC_MOTOR0   = 6
+
+# Control telemetry section IDs (from ControlTelemetry.h)
+TELEM_CTRL_SIGNALS   = 0x10
+TELEM_CTRL_OBSERVERS = 0x11
+TELEM_CTRL_SLOTS     = 0x12
 
 # Outer "sectioned packet" header (LE):
 # u8 version, u16 seq, u32 ts_ms, u8 section_count
@@ -38,6 +49,9 @@ def _make_empty(ts_ms: int, raw_len: int, meta: Dict[str, Any]) -> TelemetryPack
         encoder0=None,
         stepper0=None,
         dc_motor0=None,
+        ctrl_signals=None,
+        ctrl_observers=None,
+        ctrl_slots=None,
     )
 
 def parse_telemetry_bin(payload: bytes) -> TelemetryPacket:
@@ -173,6 +187,65 @@ def parse_telemetry_bin(payload: bytes) -> TelemetryPacket:
                     freq_hz=None,
                     resolution_bits=None,
                 )
+            continue
+
+        # Control Signals:
+        # count(u16), [id(u16), value(f32), ts_ms(u32)] * count
+        if section_id == TELEM_CTRL_SIGNALS:
+            if len(body) >= 2:
+                count = struct.unpack_from("<H", body, 0)[0]
+                signals = []
+                pos = 2
+                for _ in range(count):
+                    if pos + 10 > len(body):
+                        break
+                    sig_id, value, sig_ts = struct.unpack_from("<Hfi", body, pos)
+                    signals.append(SignalTelemetry(id=sig_id, name="", value=value, ts_ms=sig_ts))
+                    pos += 10
+                pkt.ctrl_signals = ControlSignalsTelemetry(signals=signals, count=count)
+            continue
+
+        # Control Observers:
+        # slot_count(u8), [slot(u8), enabled(u8), num_states(u8), x[0]:f32...] * slot_count
+        if section_id == TELEM_CTRL_OBSERVERS:
+            if len(body) >= 1:
+                slot_count = body[0]
+                observers = []
+                pos = 1
+                for _ in range(slot_count):
+                    if pos + 3 > len(body):
+                        break
+                    slot, enabled, num_states = struct.unpack_from("<BBB", body, pos)
+                    pos += 3
+                    states = []
+                    for _ in range(num_states):
+                        if pos + 4 > len(body):
+                            break
+                        (x,) = struct.unpack_from("<f", body, pos)
+                        states.append(x)
+                        pos += 4
+                    observers.append(ObserverTelemetry(
+                        slot=slot, enabled=bool(enabled), update_count=0, states=states
+                    ))
+                pkt.ctrl_observers = ControlObserversTelemetry(observers=observers)
+            continue
+
+        # Control Slots:
+        # slot_count(u8), [slot(u8), enabled(u8), ok(u8), run_count(u32)] * slot_count
+        if section_id == TELEM_CTRL_SLOTS:
+            if len(body) >= 1:
+                slot_count = body[0]
+                slots = []
+                pos = 1
+                for _ in range(slot_count):
+                    if pos + 7 > len(body):
+                        break
+                    slot, enabled, ok, run_count = struct.unpack_from("<BBBI", body, pos)
+                    pos += 7
+                    slots.append(ControlSlotTelemetry(
+                        slot=slot, enabled=bool(enabled), ok=bool(ok), run_count=run_count
+                    ))
+                pkt.ctrl_slots = ControlSlotsTelemetry(slots=slots)
             continue
 
         # Unknown section_id -> ignore (forward-compatible)

@@ -7,7 +7,7 @@ import pytest
 
 
 def _import_commander():
-    from robot_host.core.coms.reliable_commander import ReliableCommander  # type: ignore
+    from robot_host.command.coms.reliable_commander import ReliableCommander  # type: ignore
     return ReliableCommander
 
 

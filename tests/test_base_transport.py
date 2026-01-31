@@ -1,5 +1,5 @@
 import pytest
-from robot_host.transports.base_transport import BaseTransport
+from robot_host.transport.base_transport import BaseTransport
 from robot_host.core import protocol
 
 

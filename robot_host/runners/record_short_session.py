@@ -1,11 +1,11 @@
 import asyncio
 from pathlib import Path
 
-from robot_host.core.client import AsyncRobotClient
+from robot_host.command.client import AsyncRobotClient
 from robot_host.core.event_bus import EventBus
 from robot_host.research.recording import RecordingTransport, RecordingEventBus
 from robot_host.logger.logger import MaraLogBundle
-from robot_host.transports.serial_transport import SerialTransport  # or StreamTransport / AsyncTcpTransport
+from robot_host.transport.serial_transport import SerialTransport  # or StreamTransport / AsyncTcpTransport
 
 async def main():
     bundle = MaraLogBundle(name="short_session", log_dir="logs", console=True)

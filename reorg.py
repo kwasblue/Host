@@ -155,7 +155,7 @@ def main():
 
     print("[done ] Reorganization complete.")
     print("        NOTE: you still need to update imports to use package-style paths, e.g.")
-    print("        from robot_host.core.client import RobotClient")
+    print("        from robot_host.command.client import RobotClient")
 
 if __name__ == "__main__":
     main()

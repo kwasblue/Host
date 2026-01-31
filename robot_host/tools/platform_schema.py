@@ -359,6 +359,26 @@ COMMANDS: dict[str, dict] = {
         },
     },
 
+    "CMD_CTRL_SLOT_GET_PARAM": {
+        "kind": "cmd",
+        "direction": "host->mcu",
+        "description": "Get a scalar parameter from a control slot's controller.",
+        "payload": {
+            "slot": {
+                "type": "int",
+                "required": True,
+                "min": 0,
+                "max": 7,
+                "description": "Slot index (0-7).",
+            },
+            "key": {
+                "type": "string",
+                "required": True,
+                "description": "Parameter name (e.g., 'kp', 'ki', 'kd' for PID; 'k00', 'ki0' for STATE_SPACE).",
+            },
+        },
+    },
+
     "CMD_CTRL_SLOT_RESET": {
         "kind": "cmd",
         "direction": "host->mcu",

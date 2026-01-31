@@ -3,9 +3,9 @@
 import asyncio
 from typing import Callable
 
-from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.serial_transport import SerialTransport
-# from robot_host.transports.tcp_transport import AsyncTcpTransport  # not needed right now
+from robot_host.command.client import AsyncRobotClient
+from robot_host.transport.serial_transport import SerialTransport
+# from robot_host.transport.tcp_transport import AsyncTcpTransport  # not needed right now
 
 
 async def ainput(prompt: str = "") -> str:

@@ -71,8 +71,8 @@ async def robot(request, robot_host, robot_port, hil_timeout, tmp_path):
     Connected AsyncRobotClient for HIL tests.
     Ensures safe state on setup and teardown.
     """
-    from robot_host.transports.tcp_transport import AsyncTcpTransport
-    from robot_host.core.client import AsyncRobotClient
+    from robot_host.transport.tcp_transport import AsyncTcpTransport
+    from robot_host.command.client import AsyncRobotClient
     
     transport = AsyncTcpTransport(robot_host, robot_port)
     client = AsyncRobotClient(

@@ -1,7 +1,7 @@
 ================================================================================
 📂 PROJECT STRUCTURE
-Generated: 2026-01-29 19:43:24
-Total Files: 98
+Generated: 2026-01-30 18:36:30
+Total Files: 100
 ================================================================================
 
 📄 boot_strap_structure.py
@@ -54,6 +54,17 @@ Total Files: 98
    🧱 class AsyncRobotClient
       (no methods)
 
+📄 robot_host/core/command_streamer.py
+   🧱 class StreamSpec
+      (no methods)
+   🧱 class CommandStreamer
+      ├── def __init__(self, robot)
+      ├── def list_streams(self)
+      ├── def get_spec(self, name)
+      ├── def _is_connected(self)
+      ├── def _pending_count(self)
+      └── def _ttl_expired(self, spec)
+
 📄 robot_host/core/coms/connection_monitor.py
    🧱 class ConnectionMonitor
       ├── def __init__(self, timeout_s, on_disconnect, on_reconnect)
@@ -72,9 +83,6 @@ Total Files: 98
       ├── def __init__(self, send_func, timeout_s, max_retries, on_event)
       ├── def _emit(self, event)
       ├── def on_ack(self, seq, ok, error)
-      ├── def pending_count(self)
-      ├── def clear_pending(self)
-      ├── def stats(self)
       ├── def pending_count(self)
       ├── def clear_pending(self)
       └── def stats(self)
@@ -422,6 +430,11 @@ Total Files: 98
       └── def _send_bytes(self, data)
    ⚙️  def main()
 
+📄 robot_host/runners/stream_runner.py
+   ⚙️  def _parse_json_payload(self, s)
+   ⚙️  def provider()
+   ⚙️  def provider()
+
 📄 robot_host/runners/telemetry_shell.py
    ⚙️  def attach_telemetry_prints(self, bus)
    ⚙️  def _get(self, obj, attr, default)
@@ -699,6 +712,10 @@ Total Files: 98
       (no methods)
    🧱 class TestLogging
       (no methods)
+   🧱 class TestObserver
+      (no methods)
+   🧱 class TestObserverStateSpace
+      (no methods)
 
 📄 tests/test_hil_smoke.py
    ⚙️  def _get_mcu_port(self, request)
@@ -749,7 +766,7 @@ Total Files: 98
 ================================================================================
 📊 STATISTICS
 ================================================================================
-Total Classes:    102
-Total Functions:  182
-Total Methods:    218
+Total Classes:    106
+Total Functions:  185
+Total Methods:    221
 ================================================================================

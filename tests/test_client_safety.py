@@ -4,8 +4,8 @@ import pytest
 import asyncio
 import time
 
-from robot_host.core.coms.connection_monitor import ConnectionMonitor
-from robot_host.core.coms.reliable_commander import ReliableCommander
+from robot_host.command.coms.connection_monitor import ConnectionMonitor
+from robot_host.command.coms.reliable_commander import ReliableCommander
 
 
 # -----------------------------------------------------------------------------

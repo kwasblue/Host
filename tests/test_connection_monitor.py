@@ -5,7 +5,7 @@ import pytest
 def _import_connection_monitor():
     # Support either location
     try:
-        from robot_host.core.coms.connection_monitor import ConnectionMonitor  # type: ignore
+        from robot_host.command.coms.connection_monitor import ConnectionMonitor  # type: ignore
         return ConnectionMonitor
     except Exception:
         from robot_host.core.connection_monitor import ConnectionMonitor  # type: ignore

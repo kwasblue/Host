@@ -492,7 +492,7 @@ def _send_reliable_supports_timeout(client: Any) -> Tuple[bool, Optional[str]]:
 
 
 async def build_client(args):
-    from robot_host.core.client import AsyncRobotClient
+    from robot_host.command.client import AsyncRobotClient
 
     mode = "tcp" if args.tcp else "serial"
     dotted, TransportCls = _resolve_transport_class(args.transport, mode=mode)
@@ -551,7 +551,7 @@ async def send_cmd(client: Any, cmd: str, payload: Payload, timeout_s: float) ->
     if not hasattr(client, "send_reliable"):
         raise RuntimeError(
             f"Client {type(client).__name__} has no send_reliable(). "
-            "Expected robot_host.core.client.AsyncRobotClient."
+            "Expected robot_host.command.client.AsyncRobotClient."
         )
 
     supports_timeout, timeout_param = _send_reliable_supports_timeout(client)

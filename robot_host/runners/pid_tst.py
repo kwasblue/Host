@@ -3,8 +3,8 @@ import time
 from typing import Any, Dict, List, Optional
 
 from robot_host.core.event_bus import EventBus
-from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.tcp_transport import AsyncTcpTransport
+from robot_host.command.client import AsyncRobotClient
+from robot_host.transport.tcp_transport import AsyncTcpTransport
 
 
 async def main() -> None:

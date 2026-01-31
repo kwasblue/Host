@@ -30,11 +30,11 @@ from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt, QTimer, QTime, QDateTime, Signal, QObject
 
 from robot_host.core.event_bus import EventBus
-from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.stream_transport import StreamTransport
-from robot_host.transports.tcp_transport import AsyncTcpTransport
+from robot_host.command.client import AsyncRobotClient
+from robot_host.transport.stream_transport import StreamTransport
+from robot_host.transport.tcp_transport import AsyncTcpTransport
 
-from robot_host.modules.pill_test import PillCarousel, PillCarouselConfig
+from robot_host.module.pill_test import PillCarousel, PillCarouselConfig
 
 
 # ==================== BASIC CONFIG ====================

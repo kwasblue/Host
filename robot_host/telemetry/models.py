@@ -71,8 +71,59 @@ class DcMotorTelemetry:
     pwm_ch: Optional[int] = None
 
     speed: Optional[float] = None          # -1.0..+1.0
-    freq_hz: Optional[float] = None        # 🔹 used by your handler
+    freq_hz: Optional[float] = None
     resolution_bits: Optional[int] = None
+
+
+# -----------------------------------------------------------------------------
+# Control System Telemetry
+# -----------------------------------------------------------------------------
+
+@dataclass
+class SignalTelemetry:
+    """Single signal from the signal bus."""
+    id: int
+    name: str
+    value: float
+    ts_ms: int
+
+
+@dataclass
+class ControlSignalsTelemetry:
+    """All signals from the signal bus."""
+    signals: list  # List[SignalTelemetry]
+    count: int
+
+
+@dataclass
+class ObserverTelemetry:
+    """Single observer state estimate."""
+    slot: int
+    enabled: bool
+    update_count: int
+    states: list  # List[float] - x_hat estimates
+
+
+@dataclass
+class ControlObserversTelemetry:
+    """All observer states."""
+    observers: list  # List[ObserverTelemetry]
+
+
+@dataclass
+class ControlSlotTelemetry:
+    """Single control slot status."""
+    slot: int
+    enabled: bool
+    ok: bool
+    run_count: int
+    last_run_ms: Optional[int] = None
+
+
+@dataclass
+class ControlSlotsTelemetry:
+    """All control slot statuses."""
+    slots: list  # List[ControlSlotTelemetry]
 
 
 @dataclass
@@ -88,6 +139,11 @@ class TelemetryPacket:
     stepper0: Optional[StepperTelemetry] = None
     dc_motor0: Optional[DcMotorTelemetry] = None
 
+    # Control system telemetry
+    ctrl_signals: Optional[ControlSignalsTelemetry] = None
+    ctrl_observers: Optional[ControlObserversTelemetry] = None
+    ctrl_slots: Optional[ControlSlotsTelemetry] = None
+
 
 __all__ = [
     "ImuTelemetry",
@@ -96,5 +152,11 @@ __all__ = [
     "EncoderTelemetry",
     "StepperTelemetry",
     "DcMotorTelemetry",
+    "SignalTelemetry",
+    "ControlSignalsTelemetry",
+    "ObserverTelemetry",
+    "ControlObserversTelemetry",
+    "ControlSlotTelemetry",
+    "ControlSlotsTelemetry",
     "TelemetryPacket",
 ]

@@ -10,10 +10,10 @@ def _import_client():
     # Your file name in the listing is robot_host/core/client.py but you pasted client_async.py
     # We'll support both.
     try:
-        from robot_host.core.client import BaseAsyncRobotClient  # type: ignore
+        from robot_host.command.client import BaseAsyncRobotClient  # type: ignore
         return BaseAsyncRobotClient
     except Exception:
-        from robot_host.core.client_async import BaseAsyncRobotClient  # type: ignore
+        from robot_host.command.client_async import BaseAsyncRobotClient  # type: ignore
         return BaseAsyncRobotClient
 
 

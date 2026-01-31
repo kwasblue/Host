@@ -6,9 +6,9 @@ import argparse
 import serial
 
 from robot_host.core.event_bus import EventBus
-from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.tcp_transport import AsyncTcpTransport
-from robot_host.transports.stream_transport import StreamTransport
+from robot_host.command.client import AsyncRobotClient
+from robot_host.transport.tcp_transport import AsyncTcpTransport
+from robot_host.transport.stream_transport import StreamTransport
 
 
 class SerialTransport(StreamTransport):

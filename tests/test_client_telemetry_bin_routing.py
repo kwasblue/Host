@@ -3,7 +3,7 @@ import asyncio
 import pytest
 import struct
 
-from robot_host.core.client import BaseAsyncRobotClient
+from robot_host.command.client import BaseAsyncRobotClient
 from robot_host.core import protocol
 from helpers import CapturingBus
 from fakes.fake_async_transport import FakeAsyncTransport

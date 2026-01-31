@@ -28466,3 +28466,15 @@
 {"ts": "2026-01-30 13:20:29", "dir": "rx", "cmd": "deactivate", "ok": true, "err": null, "dt_s": 0.0950839999713935}
 {"ts": "2026-01-30 13:20:29", "dir": "tx", "cmd": "disarm", "payload": null}
 {"ts": "2026-01-30 13:20:29", "dir": "rx", "cmd": "disarm", "ok": true, "err": null, "dt_s": 0.10843591595767066}
+{"ts": "2026-01-30 19:38:02", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-30 19:38:02", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-30 19:39:39", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-30 19:39:39", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-30 19:40:49", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-30 19:40:49", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-30 19:42:54", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-30 19:42:54", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-30 20:01:42", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-30 20:01:42", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}
+{"ts": "2026-01-30 20:02:56", "dir": "tx", "cmd": "client.start", "payload": null}
+{"ts": "2026-01-30 20:02:56", "dir": "rx", "cmd": "client.start", "ok": false, "err": "SerialException(2, \"could not open port /dev/cu.usbserial-0001: [Errno 2] No such file or directory: '/dev/cu.usbserial-0001'\")"}

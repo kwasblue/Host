@@ -9,14 +9,14 @@ import math
 import time
 from typing import Any, Dict, Optional
 
-from robot_host.core.client import AsyncRobotClient
+from robot_host.command.client import AsyncRobotClient
 
 # Import your transports (adjust paths to your repo)
-from robot_host.transports.tcp_transport import AsyncTcpTransport
-from robot_host.transports.serial_transport import SerialTransport
+from robot_host.transport.tcp_transport import AsyncTcpTransport
+from robot_host.transport.serial_transport import SerialTransport
 
 # Your CommandStreamer (the one you posted / we’re building)
-from robot_host.core.command_streamer import CommandStreamer  # adjust module name
+from robot_host.command.command_streamer import CommandStreamer  # adjust module name
 
 
 Payload = Dict[str, Any]

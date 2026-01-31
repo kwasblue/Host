@@ -5,14 +5,14 @@ from __future__ import annotations
 import asyncio
 from typing import Callable
 
-from robot_host.core.client import AsyncRobotClient
+from robot_host.command.client import AsyncRobotClient
 from robot_host.tools.imu_calibrator import ImuCalibrator  # adjust if needed
 
-from robot_host.transports.bluetooth_transport import (
+from robot_host.transport.bluetooth_transport import (
     BluetoothSerialTransport,
 )
 # If you want a USB fallback, you could also import:
-# from robot_host.transports.serial_transport import SerialTransport
+# from robot_host.transport.serial_transport import SerialTransport
 
 
 async def ainput(prompt: str = "") -> str:

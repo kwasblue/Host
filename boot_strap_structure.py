@@ -246,7 +246,7 @@ def main() -> None:
         modules_dir / "telemetry_ctl.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -267,7 +267,7 @@ def main() -> None:
         modules_dir / "logging_ctl.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -292,7 +292,7 @@ def main() -> None:
         from dataclasses import dataclass
         from typing import Any
 
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -349,7 +349,7 @@ def main() -> None:
         modules_dir / "motion.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -379,7 +379,7 @@ def main() -> None:
         modules_dir / "modes.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -401,7 +401,7 @@ def main() -> None:
         modules_dir / "gpio.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -430,7 +430,7 @@ def main() -> None:
         modules_dir / "pwm.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -456,7 +456,7 @@ def main() -> None:
         modules_dir / "servo.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 
@@ -489,7 +489,7 @@ def main() -> None:
         modules_dir / "stepper.py",
         """
         from typing import Any
-        from robot_host.core.client import AsyncRobotClient
+        from robot_host.command.client import AsyncRobotClient
         from robot_host.core.event_bus import EventBus
 
 

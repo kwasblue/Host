@@ -1,0 +1,367 @@
+# Robot Host
+
+A comprehensive Python library for controlling ESP32-based robots. Provides transport abstraction, command handling, telemetry processing, and research tools for robotics development.
+
+## Features
+
+- **Transport Layer**: Serial (USB), TCP (WiFi), Bluetooth Classic
+- **Async Client**: Non-blocking robot control with reliable command delivery
+- **Telemetry**: Real-time sensor data processing (IMU, encoders, motors)
+- **Research Tools**: Simulation, system identification, metrics analysis
+- **Recording/Replay**: Session recording for offline analysis
+
+## Installation
+
+```bash
+# Clone the repository
+git clone <repo-url>
+cd Host
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install in development mode
+pip install -e .
+```
+
+### Dependencies
+
+- Python 3.10+
+- pyserial
+- numpy
+- scipy
+- matplotlib
+- pandas
+- pyyaml
+
+## Quick Start
+
+### Connect to Robot
+
+```python
+import asyncio
+from robot_host.transport.serial_transport import SerialTransport
+from robot_host.command.client import AsyncRobotClient
+
+async def main():
+    # Create transport and client
+    transport = SerialTransport("/dev/ttyUSB0", baudrate=115200)
+    client = AsyncRobotClient(transport=transport)
+
+    # Start (performs handshake)
+    await client.start()
+    print(f"Connected to {client.robot_name}")
+
+    # Control robot
+    await client.arm()
+    await client.activate()
+    await client.set_vel(vx=0.2, omega=0.0)
+    await asyncio.sleep(2)
+    await client.cmd_stop()
+
+    # Cleanup
+    await client.disarm()
+    await client.stop()
+
+asyncio.run(main())
+```
+
+### TCP Connection
+
+```python
+from robot_host.transport.tcp_transport import AsyncTcpTransport
+
+transport = AsyncTcpTransport(host="192.168.1.100", port=8080)
+client = AsyncRobotClient(transport=transport)
+```
+
+### Receive Telemetry
+
+```python
+from robot_host.telemetry.host_module import TelemetryHostModule
+
+# Subscribe to telemetry events
+def on_imu(data):
+    print(f"IMU: ax={data['ax']:.2f}, ay={data['ay']:.2f}, az={data['az']:.2f}")
+
+client.bus.subscribe("telemetry.imu", on_imu)
+
+# Or use TelemetryHostModule for structured data
+telemetry = TelemetryHostModule(client.bus)
+# Access latest: telemetry.latest
+```
+
+## Directory Structure
+
+```
+robot_host/
+├── config/          # Configuration
+│   ├── feature_flags.py   # Feature flag definitions
+│   ├── command_defs.py    # Command definitions
+│   └── pin_config.py      # Pin mappings
+├── core/            # Core components
+│   ├── event_bus.py       # Pub/sub messaging
+│   ├── protocol.py        # Frame protocol
+│   └── messages.py        # Message types
+├── transport/       # Communication transports
+│   ├── serial_transport.py
+│   ├── tcp_transport.py
+│   └── bluetooth_transport.py
+├── command/         # Command handling
+│   ├── client.py          # AsyncRobotClient
+│   └── coms/
+│       ├── reliable_commander.py
+│       └── connection_monitor.py
+├── telemetry/       # Telemetry processing
+│   ├── parser.py          # Telemetry parsing
+│   ├── models.py          # Data models
+│   └── host_module.py     # Telemetry module
+├── motor/           # Motor modules
+│   ├── motion.py          # MotionHostModule
+│   ├── servo.py
+│   └── stepper.py
+├── sensor/          # Sensor modules
+│   ├── encoder.py         # EncoderHostModule
+│   ├── imu.py
+│   └── ultrasonic.py
+├── hw/              # Hardware modules
+│   ├── gpio.py            # GpioHostModule
+│   └── pwm.py
+├── research/        # Research & analysis tools
+│   ├── simulation.py      # Physics simulation
+│   ├── sysid.py           # System identification
+│   ├── metrics.py         # Performance metrics
+│   ├── analysis.py        # Signal analysis
+│   ├── plotting.py        # Visualization
+│   ├── recording.py       # Session recording
+│   ├── replay.py          # Session replay
+│   └── configs/           # Robot configurations
+└── examples/        # Example scripts
+```
+
+## Examples
+
+See the `examples/` directory for comprehensive examples:
+
+| Example | Description |
+|---------|-------------|
+| `01_serial_connection.py` | USB serial connection |
+| `02_tcp_connection.py` | WiFi TCP connection |
+| `03_command_basics.py` | Sending commands, ACKs |
+| `04_telemetry_stream.py` | Receiving sensor data |
+| `05_gpio_control.py` | GPIO control (LEDs) |
+| `06_motor_control.py` | Motor velocity control |
+| `07_encoder_feedback.py` | Encoder reading |
+| `08_session_recording.py` | Recording sessions |
+| `09_full_robot_control.py` | Complete control loop |
+
+```bash
+cd examples
+python 01_serial_connection.py /dev/ttyUSB0
+```
+
+## Research Module
+
+The research module provides tools for robotics analysis:
+
+### Simulation
+
+```python
+from robot_host.research.config_loader import load_robot
+
+# Load robot from YAML config
+robot = load_robot("robot_host/research/configs/medium_robot.yaml")
+
+# Run simulation
+for _ in range(1000):
+    robot.set_velocity(0.3, 0.1)
+    state = robot.step(0.01)  # 10ms step
+    print(f"Position: ({state['x']:.3f}, {state['y']:.3f})")
+```
+
+### System Identification
+
+```python
+from robot_host.research.sysid import identify_first_order_step
+
+# Estimate system parameters from step response
+params = identify_first_order_step(times, response, input_amplitude=1.0)
+print(f"Time constant: {params.tau} s, DC gain: {params.K}")
+```
+
+### Metrics Analysis
+
+```python
+from robot_host.research.metrics import analyze_session
+
+# Analyze recorded session
+metrics = analyze_session("session.jsonl")
+print(f"Latency p95: {metrics.latency.p95_ms:.1f} ms")
+print(f"Jitter: {metrics.jitter.jitter_ms:.2f} ms")
+```
+
+See `robot_host/research/README.md` for detailed research module documentation.
+
+## API Reference
+
+### AsyncRobotClient
+
+Main client class for robot control.
+
+```python
+client = AsyncRobotClient(
+    transport=transport,
+    bus=EventBus(),
+    heartbeat_interval_s=0.2,
+    connection_timeout_s=1.0,
+    command_timeout_s=0.25,
+    max_retries=3,
+)
+
+# Lifecycle
+await client.start()
+await client.stop()
+
+# State machine
+await client.arm()
+await client.disarm()
+await client.activate()
+await client.deactivate()
+await client.estop()
+await client.clear_estop()
+
+# Motion
+await client.set_vel(vx=0.2, omega=0.1)
+await client.cmd_stop()
+
+# Reliable commands
+success, error = await client.send_reliable("CMD_NAME", {"key": "value"})
+
+# Properties
+client.is_connected
+client.robot_name
+client.firmware_version
+```
+
+### EventBus
+
+Pub/sub messaging for telemetry and events.
+
+```python
+from robot_host.core.event_bus import EventBus
+
+bus = EventBus()
+
+# Subscribe to topics
+def handler(data):
+    print(data)
+
+bus.subscribe("telemetry.imu", handler)
+
+# Publish events
+bus.publish("telemetry.imu", {"ax": 0.1, "ay": 0.0, "az": 9.8})
+```
+
+### Telemetry Topics
+
+| Topic | Data |
+|-------|------|
+| `telemetry.raw` | Raw telemetry JSON |
+| `telemetry.packet` | Parsed TelemetryPacket |
+| `telemetry.imu` | IMU data (ax, ay, az, gx, gy, gz) |
+| `telemetry.encoder0` | Encoder ticks/velocity |
+| `telemetry.dc_motor0` | Motor PWM/current |
+| `telemetry.ultrasonic` | Distance reading |
+
+## Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_protocol.py -v
+
+# Run with coverage
+pytest tests/ --cov=robot_host
+```
+
+## Configuration
+
+### Feature Flags
+
+```python
+from robot_host.config.feature_flags import FeatureFlags
+
+# Get preset configurations
+flags = FeatureFlags.minimal()   # UART only
+flags = FeatureFlags.motors()    # Motors + encoders
+flags = FeatureFlags.sensors()   # WiFi + sensors
+flags = FeatureFlags.full()      # Everything
+```
+
+### Robot Configuration (YAML)
+
+```yaml
+name: my_robot
+type: diff_drive
+
+drive:
+  wheel_radius: 0.05      # meters
+  wheel_base: 0.2         # meters
+  max_linear_vel: 1.0     # m/s
+  max_angular_vel: 3.0    # rad/s
+
+noise:
+  imu:
+    accel_std: 0.01       # g
+    gyro_std: 0.001       # rad/s
+  encoder:
+    counts_per_rev: 1000
+
+simulation:
+  dt: 0.01                # seconds
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      User Application                            │
+├─────────────────────────────────────────────────────────────────┤
+│                     AsyncRobotClient                             │
+├─────────────┬─────────────┬─────────────┬─────────────┬─────────┤
+│  Transport  │  Command    │  Telemetry  │  Modules    │ Research │
+│  Layer      │  Layer      │  Layer      │             │          │
+├─────────────┼─────────────┼─────────────┼─────────────┼─────────┤
+│ Serial      │ Reliable    │ Parser      │ Motion      │ Simulate │
+│ TCP         │ Commander   │ Models      │ GPIO        │ SysID    │
+│ Bluetooth   │ Connection  │ HostModule  │ Encoder     │ Metrics  │
+│             │ Monitor     │ FileLogger  │ IMU         │ Analysis │
+├─────────────┴─────────────┴─────────────┴─────────────┴─────────┤
+│                         EventBus                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                      Protocol (framing)                          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| Command latency | < 5ms (local) |
+| Telemetry rate | 50+ Hz |
+| Frame parsing | O(n) optimized |
+| Memory stable | Bounded queues |
+
+## ESP32 Firmware
+
+This library is designed to work with the [ESP32 MCU Host](../PlatformIO/Projects/ESP32%20MCU%20Host) firmware.
+
+## License
+
+MIT License

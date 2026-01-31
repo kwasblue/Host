@@ -9,7 +9,7 @@ from robot_host.config.version import PROTOCOL_VERSION
 
 
 def _import_client():
-    from robot_host.core.client import BaseAsyncRobotClient
+    from robot_host.command.client import BaseAsyncRobotClient
     return BaseAsyncRobotClient
 
 

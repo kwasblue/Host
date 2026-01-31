@@ -3,9 +3,9 @@
 import asyncio
 from typing import Callable, Iterable
 
-from robot_host.core.client import AsyncRobotClient
-from robot_host.transports.tcp_transport import AsyncTcpTransport
-from robot_host.transports.serial_transport import SerialTransport
+from robot_host.command.client import AsyncRobotClient
+from robot_host.transport.tcp_transport import AsyncTcpTransport
+from robot_host.transport.serial_transport import SerialTransport
 from robot_host.tools.imu_calibrator import ImuCalibrator  # adjust import path as needed
 
 
